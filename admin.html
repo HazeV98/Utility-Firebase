@@ -157,7 +157,7 @@
     <div class="admin-card">
         <h3>⚙️ Credenziali GitHub</h3>
         <input type="text" id="gh-owner" placeholder="Username GitHub" value="HazeV98">
-        <input type="text" id="gh-repo" placeholder="Nome Repository" value="Utility">
+        <input type="text" id="gh-repo" placeholder="Nome Repository" value="Utility-App">
         <input type="password" id="gh-token" placeholder="Token GitHub (PAT)">
         <label class="checkbox-container">
             <input type="checkbox" id="remember-token"> Ricorda Token su questo dispositivo
@@ -209,13 +209,12 @@
     </div>
 
     <div class="admin-card">
-        <h3>📦 Uploader ZIP & Mappa</h3>
+        <h3>📦 Uploader ZIP</h3>
         <p style="font-size: 12px; color: #adb5bd; margin-top: 0; line-height: 1.4;">
-            Comprimi la tua cartella in <b>.zip</b> e selezionala qui. Alla fine dell'upload verrà creata in automatico la mappa file per Firebase.
+            Comprimi la tua cartella in <b>.zip</b> e selezionala qui.
         </p>
         <input type="file" id="zip-file" accept=".zip">
         <button class="btn-action btn-upload" onclick="caricaZip()">Estrai e Sincronizza</button>
-        <button class="btn-action" style="background-color: #17a2b8; margin-top: 10px; font-size: 14px; padding: 10px;" onclick="aggiornaMappaFiles()">🔄 Forza Aggiornamento Mappa</button>
         <div id="status-log-zip" class="status-log">In attesa...</div>
     </div>
 
@@ -282,6 +281,56 @@
 
         function copiaTesto(testo) {
             navigator.clipboard.writeText(testo).then(() => { alert("Codice copiato negli appunti: " + testo); });
+        }
+
+        // ==========================================
+        // FUNZIONE CRUCIALE CI/CD: LA SUPER MAPPA
+        // ==========================================
+        async function aggiornaMappaFiles(owner, repo, token) {
+            try {
+                let listaRotazioni = [];
+                try {
+                    const urlRot = `https://api.github.com/repos/${owner}/${repo}/contents/rotazioni`;
+                    const resRot = await fetch(urlRot, { headers: { "Authorization": `token ${token}` } });
+                    if (resRot.ok) {
+                        const filesRot = await resRot.json();
+                        listaRotazioni = filesRot.filter(f => f.type === "file").map(f => f.name);
+                    }
+                } catch(e) {}
+
+                let alberoCompleto = [];
+                try {
+                    const resRepo = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: { "Authorization": `token ${token}` } });
+                    if (resRepo.ok) {
+                        const repoData = await resRepo.json();
+                        const urlTree = `https://api.github.com/repos/${owner}/${repo}/git/trees/${repoData.default_branch}?recursive=1`;
+                        const resTree = await fetch(urlTree, { headers: { "Authorization": `token ${token}` } });
+                        if (resTree.ok) {
+                            const treeData = await resTree.json();
+                            alberoCompleto = treeData.tree.map(f => f.path);
+                        }
+                    }
+                } catch(e) {}
+
+                const mappaGlobale = { rotazioni: listaRotazioni, albero: alberoCompleto };
+                const urlMappa = `https://api.github.com/repos/${owner}/${repo}/contents/mappa_file.json`;
+                
+                let shaMappa = null;
+                try {
+                    const rM = await fetch(urlMappa, { headers: { "Authorization": `token ${token}` } });
+                    if (rM.ok) { const dM = await rM.json(); shaMappa = dM.sha; }
+                } catch(e) {}
+
+                await fetch(urlMappa, {
+                    method: "PUT",
+                    headers: { "Authorization": `token ${token}` },
+                    body: JSON.stringify({
+                        message: "Update mappa globale per indicizzazione Firebase",
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(mappaGlobale)))),
+                        sha: shaMappa
+                    })
+                });
+            } catch (e) { console.error("Errore creazione mappa globale:", e); }
         }
 
         // ==========================================
@@ -413,7 +462,6 @@
 
             const url = `https://api.github.com/repos/${owner}/${repo}/contents/calendario.html`;
             try {
-                // Per supportare correttamente accenti ed emoji durante la codifica base64
                 const b64Content = btoa(unescape(encodeURIComponent(newContent)));
                 
                 const putRes = await fetch(url, {
@@ -430,7 +478,11 @@
                     const updatedData = await putRes.json();
                     calendarioSha = updatedData.content.sha; 
                     calendarioContent = newContent;
-                    statusLog.innerText = "✅ Calendario aggiornato con successo su GitHub!";
+                    
+                    statusLog.innerText = "⏳ Sincronizzazione indice Firebase in corso...";
+                    await aggiornaMappaFiles(owner, repo, token);
+                    
+                    statusLog.innerText = "✅ Calendario aggiornato con successo!";
                     statusLog.style.color = "var(--success)";
                 } else {
                     throw new Error("Impossibile caricare il file modificato.");
@@ -471,5 +523,303 @@
                 if (response.status === 401 || response.status === 403) throw new Error("Token non valido.");
 
                 let sha = ""; let codiciAttuali = [];
-                if (
+                if (response.ok) {
+                    const data = await response.json();
+                    sha = data.sha;
+                    codiciAttuali = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                }
+
+                let nuovoCodice;
+                do { nuovoCodice = Math.random().toString(36).substring(2, 8).toUpperCase();
+                } while (codiciAttuali.some(item => item.codice === nuovoCodice));
+
+                displayCodice.innerHTML = `
+                    <div class="codice-display-container">
+                        <span class="codice-testo">${nuovoCodice}</span>
+                        <button class="btn-copia" onclick="copiaTesto('${nuovoCodice}')" title="Copia codice">📋</button>
+                    </div>
+                `;
+
+                codiciAttuali.push({ codice: nuovoCodice, nome: nomeCollega, data_creazione: new Date().toISOString().split('T')[0], attivo: true });
+
+                statusLog.innerText = "⏳ Salvataggio in corso...";
+                const nuovoContenuto = btoa(unescape(encodeURIComponent(JSON.stringify(codiciAttuali, null, 2))));
+
+                const putResponse = await fetch(url, {
+                    method: 'PUT', headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Aggiunto codice per ${nomeCollega}`, content: nuovoContenuto, sha: sha || undefined })
+                });
+
+                if (putResponse.ok) {
+                    statusLog.innerText = "⏳ Sincronizzazione indice Firebase in corso...";
+                    await aggiornaMappaFiles(owner, repo, token);
+                    statusLog.innerText = "✅ Salvato con successo!"; statusLog.style.color = "var(--success)"; document.getElementById('nome-collega').value = ""; 
+                } else throw new Error("Errore durante il salvataggio.");
+
+            } catch (error) { statusLog.innerText = "❌ " + error.message; statusLog.style.color = "var(--danger)"; }
+        }
+
+        function chiudiModal() { document.getElementById('manage-modal').style.display = 'none'; }
+        async function apriGestioneCodici() { document.getElementById('manage-modal').style.display = 'flex'; await caricaListaCodici(); }
+
+        async function caricaListaCodici() {
+            const owner = document.getElementById('gh-owner').value.trim(); const repo = document.getElementById('gh-repo').value.trim(); const token = document.getElementById('gh-token').value.trim();
+            const listContainer = document.getElementById('codici-list-container');
+
+            if (!owner || !repo || !token) { listContainer.innerHTML = "<div style='color:var(--danger); text-align:center; padding: 20px;'>Compila i campi credenziali.</div>"; return; }
+
+            listContainer.innerHTML = "<div style='text-align:center; padding: 20px; color: #666;'>Scaricamento...</div>";
+            try {
+                let response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${codiciPath}`, { headers: { 'Authorization': `token ${token}` } });
+                if (!response.ok) throw new Error("Errore nel recupero da GitHub.");
+                
+                const data = await response.json();
+                let codici = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                let attivi = codici.filter(c => c.attivo === true);
+
+                attivi.sort((a, b) => (a.nome || "Z").toLowerCase().localeCompare((b.nome || "Z").toLowerCase()));
+                codiciAttiviCache = attivi; 
+                document.getElementById('ricerca-codici').value = ""; 
+                disegnaListaCodici(codiciAttiviCache);
+
+            } catch (error) { listContainer.innerHTML = `<div style='color:var(--danger); text-align:center; padding: 20px;'>Errore: ${error.message}</div>`; }
+        }
+
+        function filtraCodici() {
+            const query = document.getElementById('ricerca-codici').value.toLowerCase().trim();
+            disegnaListaCodici(codiciAttiviCache.filter(c => (c.nome || "").toLowerCase().includes(query)));
+        }
+
+        function disegnaListaCodici(lista) {
+            const listContainer = document.getElementById('codici-list-container');
+            listContainer.innerHTML = "";
+            if (lista.length === 0) { listContainer.innerHTML = "<div style='text-align:center; padding: 20px; color: #666;'>Nessun codice.</div>"; return; }
+
+            lista.forEach(c => {
+                const item = document.createElement('div'); item.className = 'codice-item';
+                item.innerHTML = `
+                    <div class="codice-info"><strong>${c.nome || 'Non specificato'}</strong>Codice: <b>${c.codice}</b><br><span style="font-size: 11px; color: #888;">Data: ${c.data_creazione}</span></div>
+                    <button class="btn-revoca" onclick="revocaCodice('${c.codice}')">Revoca</button>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        async function revocaCodice(codiceRevoca) {
+            if (!confirm(`Vuoi REVOCARE l'accesso per ${codiceRevoca}?`)) return;
+            const owner = document.getElementById('gh-owner').value.trim(); const repo = document.getElementById('gh-repo').value.trim(); const token = document.getElementById('gh-token').value.trim();
+            const listContainer = document.getElementById('codici-list-container');
+            listContainer.innerHTML = "<div style='text-align:center; padding: 20px; font-weight: bold;'>Revoca in corso...</div>";
+
+            try {
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${codiciPath}`;
+                let response = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+                const data = await response.json();
+                let codici = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+                let trovato = false;
+                codici.forEach(c => { if (c.codice === codiceRevoca) { c.attivo = false; trovato = true; } });
+                if (!trovato) throw new Error("Codice non trovato.");
+
+                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(codici, null, 2))));
+                const putResponse = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `Revocato ${codiceRevoca}`, content: b64, sha: data.sha }) });
+
+                if (putResponse.ok) {
+                    await aggiornaMappaFiles(owner, repo, token);
+                    await caricaListaCodici(); 
+                } else {
+                    throw new Error("Errore durante l'aggiornamento.");
+                }
+            } catch (error) { listContainer.innerHTML = `<div style='color:var(--danger); text-align:center; padding: 20px;'>Errore: ${error.message}</div>`; }
+        }
+
+        // ==========================================
+        // MODULO: UPLOADER (SMART ZIP)
+        // ==========================================
+        async function caricaZip() {
+            const owner = document.getElementById('gh-owner').value.trim(); const repo = document.getElementById('gh-repo').value.trim(); const token = document.getElementById('gh-token').value.trim();
+            const fileInput = document.getElementById('zip-file'); const statusLog = document.getElementById('status-log-zip');
+
+            if (!owner || !repo || !token) { statusLog.innerText = "❌ Compila credenziali."; statusLog.style.color = "var(--danger)"; return; }
+            if (fileInput.files.length === 0) { statusLog.innerText = "❌ Seleziona file .zip!"; statusLog.style.color = "var(--danger)"; return; }
+
+            gestisciMemoriaToken(token, document.getElementById('remember-token').checked);
+            statusLog.innerText = "⏳ Lettura struttura in corso..."; statusLog.style.color = "white";
+
+            try {
+                const zip = await JSZip.loadAsync(fileInput.files[0]);
+                const filesToUpload = []; const allPaths = [];
+
+                zip.forEach((relPath, zipEntry) => { if (!zipEntry.dir && !relPath.includes('__MACOSX') && !relPath.includes('.DS_Store')) { filesToUpload.push(zipEntry); allPaths.push(relPath); } });
+                if (filesToUpload.length === 0) { statusLog.innerText = "⚠️ Nessun file nello ZIP."; statusLog.style.color = "#ffc107"; return; }
+
+                let rootFolder = "";
+                if (allPaths[0].split('/').length > 1) {
+                    let possibleRoot = allPaths[0].split('/')[0] + '/';
+                    if (allPaths.every(p => p.startsWith(possibleRoot))) rootFolder = possibleRoot;
+                }
+
+                let successCount = 0; let errorCount = 0;
+
+                for (let i = 0; i < filesToUpload.length; i++) {
+                    const zipEntry = filesToUpload[i];
+                    let pathInRepo = zipEntry.name;
+                    if (rootFolder && pathInRepo.startsWith(rootFolder)) pathInRepo = pathInRepo.substring(rootFolder.length);
+                    
+                    statusLog.innerText = `⏳ Caricamento ${i + 1}/${filesToUpload.length}...\n(${pathInRepo})`;
+                    const base64Data = await zipEntry.async("base64");
+                    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${pathInRepo}`;
+
+                    let sha = undefined;
+                    try { const checkRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } }); if (checkRes.ok) { sha = (await checkRes.json()).sha; } } catch(e) {} 
+
+                    const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `Admin: ${pathInRepo}`, content: base64Data, sha: sha }) });
+                    if (putRes.ok) successCount++; else errorCount++;
+                }
+
+                if (errorCount === 0) { 
+                    statusLog.innerText = `⏳ Sincronizzazione indice Firebase in corso...`;
+                    await aggiornaMappaFiles(owner, repo, token);
+                    statusLog.innerText = `✅ ${successCount} file caricati. Mappa aggiornata!`; 
+                    statusLog.style.color = "var(--success)"; 
+                    fileInput.value = ""; 
+                } else { 
+                    statusLog.innerText = `⏳ Sincronizzazione indice Firebase in corso...`;
+                    await aggiornaMappaFiles(owner, repo, token);
+                    statusLog.innerText = `⚠️ ${successCount} ok, ${errorCount} errori. Mappa aggiornata.`; 
+                    statusLog.style.color = "#ffc107"; 
+                }
+
+            } catch (error) { statusLog.innerText = "❌ Errore elaborazione ZIP."; statusLog.style.color = "var(--danger)"; }
+        }
+
+        // ==========================================
+        // MODULO: GESTIONE VARIANTI
+        // ==========================================
+        let variantiFp = null;
+
+        function initVarianti(mode = 'multiple') {
+            if(variantiFp) variantiFp.destroy();
+            variantiFp = flatpickr("#var-date", {
+                mode: mode,
+                dateFormat: "Y-m-d",
+                locale: "it"
+            });
+        }
+
+        function setVariantiMode(mode) {
+            document.getElementById('btn-mode-singola').style.backgroundColor = mode === 'multiple' ? 'var(--primary)' : '#6c757d';
+            document.getElementById('btn-mode-multipla').style.backgroundColor = mode === 'range' ? 'var(--primary)' : '#6c757d';
+            initVarianti(mode);
+            document.getElementById('var-date').value = "";
+        }
+
+        async function salvaVarianti() {
+            const owner = document.getElementById('gh-owner').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            const token = document.getElementById('gh-token').value.trim();
+            const statusLog = document.getElementById('status-log-var');
+
+            if (!owner || !repo || !token) {
+                statusLog.innerText = "❌ Compila Username, Repo e Token in alto.";
+                statusLog.style.color = "var(--danger)";
+                return;
+            }
+
+            if (!variantiFp || variantiFp.selectedDates.length === 0) {
+                statusLog.innerText = "❌ Seleziona almeno una data dal calendario.";
+                statusLog.style.color = "var(--danger)";
+                return;
+            }
+
+            gestisciMemoriaToken(token, document.getElementById('remember-token').checked);
+            statusLog.innerText = "⏳ Recupero file varianti attuale...";
+            statusLog.style.color = "white";
+
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/presenza_varianti.json`;
+            let sha = "";
+            let jsonAttuale = {};
+
+            try {
+                let response = await fetch(url + `?t=${new Date().getTime()}`, { headers: { 'Authorization': `token ${token}` } });
+                if (response.ok) {
+                    const data = await response.json();
+                    sha = data.sha;
+                    jsonAttuale = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                } else if (response.status !== 404) {
+                    throw new Error("Errore nel recupero del file su GitHub.");
+                }
+
+                let dates = [];
+                if (variantiFp.config.mode === 'multiple') {
+                    dates = variantiFp.selectedDates;
+                } else if (variantiFp.config.mode === 'range') {
+                    let start = variantiFp.selectedDates[0];
+                    let end = variantiFp.selectedDates[1] || start;
+                    if (start) {
+                        let curr = new Date(start);
+                        curr.setHours(12, 0, 0, 0); 
+                        let endG = new Date(end);
+                        endG.setHours(12, 0, 0, 0);
+                        while (curr <= endG) {
+                            dates.push(new Date(curr));
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                    }
+                }
+
+                let dateStrs = dates.map(d => {
+                    let t = new Date(d);
+                    return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, '0') + "-" + String(t.getDate()).padStart(2, '0');
+                });
+
+                let lineeInput = document.getElementById('var-linee').value.trim();
+                let lineeArr = lineeInput ? lineeInput.split(',').map(s => s.trim()).filter(s => s) : [];
+
+                if (document.getElementById('var-pulisci').checked) {
+                    let dOggi = new Date();
+                    let oggiStr = dOggi.getFullYear() + "-" + String(dOggi.getMonth() + 1).padStart(2, '0') + "-" + String(dOggi.getDate()).padStart(2, '0');
+                    for (let key in jsonAttuale) {
+                        if (key < oggiStr) {
+                            delete jsonAttuale[key];
+                        }
+                    }
+                }
+
+                dateStrs.forEach(dStr => {
+                    jsonAttuale[dStr] = lineeArr;
+                });
+
+                statusLog.innerText = "⏳ Salvataggio in corso...";
+                const nuovoContenuto = btoa(unescape(encodeURIComponent(JSON.stringify(jsonAttuale, null, 2))));
+
+                const putResponse = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: `Aggiornate varianti di servizio via Admin Panel`,
+                        content: nuovoContenuto,
+                        sha: sha || undefined
+                    })
+                });
+
+                if (putResponse.ok) {
+                    statusLog.innerText = "⏳ Sincronizzazione indice Firebase in corso...";
+                    await aggiornaMappaFiles(owner, repo, token);
+                    statusLog.innerText = "✅ Modifiche salvate con successo!";
+                    statusLog.style.color = "var(--success)";
+                    variantiFp.clear();
+                    document.getElementById('var-linee').value = "";
+                } else {
+                    throw new Error("Impossibile salvare il file su GitHub.");
+                }
+
+            } catch (error) {
+                statusLog.innerText = "❌ " + error.message;
+                statusLog.style.color = "var(--danger)";
+            }
+        }
+    </script>
+</body>
+</html>
  
