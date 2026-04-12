@@ -26,105 +26,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        :root {
-            --primary: #0056b3;
-            --bg-color: #f4f7f6;
-            --text-color: #333;
-            --success: #28a745;
-            --danger: #dc3545;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .header {
-            width: 100%;
-            max-width: 400px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-top: 10px;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
+        :root { --primary: #0056b3; --bg-color: #f4f7f6; --text-color: #333; --success: #28a745; --danger: #dc3545; }
+        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px; margin-bottom: 30px; position: relative; }
         .header-side { flex: 1; display: flex; align-items: center; }
         .header-side.right { justify-content: flex-end; }
         .header-center { display: flex; flex-direction: column; align-items: center; flex: 2; }
-
-        h2 { 
-            margin: 0; color: var(--primary); font-size: 30px; font-weight: bold; text-align: center;
-            user-select: none; -webkit-user-select: none; cursor: pointer; 
-        }
-
-        #install-btn {
-            display: none; background-color: var(--success); color: white; border: none;
-            padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 20px;
-            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;
-            animation: pulse 2s infinite;
-        }
-
-        .btn-login {
-            background-color: #ea4335; color: white; border: none; padding: 8px 12px;
-            font-size: 12px; font-weight: bold; border-radius: 20px; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: none;
-        }
-
-        .btn-header-alt {
-            background-color: var(--primary); color: white; border: none; padding: 8px 12px;
-            font-size: 12px; font-weight: bold; border-radius: 20px; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: none;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-            50% { transform: scale(1.05); box-shadow: 0 4px 10px rgba(40, 167, 69, 0.4); }
-            100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        }
-
+        h2 { margin: 0; color: var(--primary); font-size: 30px; font-weight: bold; text-align: center; user-select: none; -webkit-user-select: none; cursor: pointer; }
+        #install-btn { display: none; background-color: var(--success); color: white; border: none; padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap; animation: pulse 2s infinite; }
+        .btn-login { background-color: #ea4335; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: none; }
+        .btn-header-alt { background-color: var(--primary); color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: none; }
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); } 50% { transform: scale(1.05); box-shadow: 0 4px 10px rgba(40, 167, 69, 0.4); } 100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); } }
         .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; max-width: 400px; }
-        .menu-btn {
-            background-color: var(--primary); color: white; border: none; padding: 18px;
-            font-size: 18px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.2s ease; text-align: center; text-decoration: none; display: block; font-weight: 500;
-        }
+        .menu-btn { background-color: var(--primary); color: white; border: none; padding: 18px; font-size: 18px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; text-align: center; text-decoration: none; display: block; font-weight: 500; }
         .menu-btn:active { transform: translateY(2px); opacity: 0.9; }
         .btn-oggi { background-color: var(--success); font-size: 20px; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
-
         .feedback-section { margin-top: 40px; margin-bottom: 20px; text-align: center; max-width: 350px; }
         .feedback-section p { color: #666; font-size: 14px; margin-bottom: 15px; }
         .telegram-icon { display: inline-block; transition: transform 0.2s ease; }
         .telegram-icon:active { transform: scale(0.9); }
-
-        /* MODALI */
-        #ddsReminderModal, #authModal, #profileModal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; 
-            z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); 
-        }
-        .modal-content { 
-            background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; 
-            text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; color: var(--text-color);
-        }
-        
-        .input-field {
-            width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef;
-            border-radius: 8px; box-sizing: border-box; font-size: 14px;
-        }
-
-        .btn-modal {
-            border: none; border-radius: 8px; padding: 12px; cursor: pointer;
-            font-weight: bold; font-size: 14px; width: 100%; margin-top: 10px;
-        }
-
+        #ddsReminderModal, #authModal, #profileModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; color: var(--text-color); max-height: 90vh; overflow-y: auto; }
+        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white;}
+        .btn-modal { border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%; margin-top: 10px; }
         #secret-btn, #generatore-btn { display: none; background-color: var(--danger); }
         #rotazioni-btn { display: none; }
     </style>
@@ -150,13 +74,13 @@
         <a href="calendario.html" class="menu-btn">📅 Calendario</a>
         <a href="dati_calendario.html" class="menu-btn">📊 Statistiche</a>
         <a href="turni.html" class="menu-btn">🔄 Turni</a>
-        <a href="rubrica.html" class="menu-btn">📞 Rubrica</a>
         <a href="orari.html" class="menu-btn">🕒 Orari</a>
         <a href="rotazioni.html" id="rotazioni-btn" class="menu-btn">👥 Rotazioni</a>
         <a href="documenti.html" class="menu-btn">📄 Documenti</a>
         <a href="link.html" class="menu-btn">🔗 Link</a>
         <a href="contatti.html" class="menu-btn">📞 Contatti</a>
         <a href="buoni.html" class="menu-btn">🍝 Buoni Pasto</a>
+        <a href="rubrica.html" class="menu-btn" style="background-color: #17a2b8;">📖 Rubrica Colleghi</a>
         <a href="dds.html" class="menu-btn">📂 Archivio DDS</a>
         <a href="guida.html" class="menu-btn" style="background-color: #6c757d;">📖 Guida</a>
         
@@ -178,6 +102,17 @@
             <label style="font-size: 12px; color: #666; font-weight: bold;">Cognome:</label>
             <input type="text" id="profileCognome" class="input-field" placeholder="Inserisci cognome">
             
+            <label style="font-size: 12px; color: #666; font-weight: bold;">Mansione:</label>
+            <select id="profileMansione" class="input-field">
+                <option value="">-- Seleziona Mansione --</option>
+                <option value="Marinaio">Marinaio</option>
+                <option value="Preposto al comando">Preposto al comando</option>
+                <option value="Comandante">Comandante</option>
+                <option value="Timoniere">Timoniere</option>
+                <option value="Marinaio polivalente">Marinaio polivalente</option>
+                <option value="Direttore di macchina">Direttore di macchina</option>
+            </select>
+
             <label style="font-size: 12px; color: #666; font-weight: bold;">Matricola:</label>
             <input type="text" id="profileMatricola" class="input-field" placeholder="Inserisci matricola">
 
@@ -217,13 +152,11 @@
     </div>
 
     <script>
-        // Service Worker e Installazione
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'block'; });
         document.getElementById('install-btn').addEventListener('click', async () => { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } });
 
-        // Logica Sblocchi
         const titleTrigger = document.getElementById('main-title');
         let tapCount = 0; let tapTimer; let holdTimer;
         document.addEventListener('DOMContentLoaded', () => {
@@ -253,13 +186,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { 
-            getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, 
-            signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail 
-        } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-        import { 
-            getFirestore, doc, setDoc, getDoc 
-        } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4",
@@ -281,7 +209,6 @@
         window.recuperaPassword = () => sendPasswordResetEmail(auth, document.getElementById('emailInput').value).then(() => alert("Email inviata!"));
         window.logout = () => { signOut(auth); document.getElementById('profileModal').style.display='none'; };
 
-        // --- FUNZIONE SALVATAGGIO PROFILO ---
         window.salvaProfilo = async () => {
             const user = auth.currentUser;
             if (!user) return;
@@ -292,18 +219,13 @@
 
             const nome = document.getElementById('profileNome').value.trim();
             const cognome = document.getElementById('profileCognome').value.trim();
+            const mansione = document.getElementById('profileMansione').value;
             const matricola = document.getElementById('profileMatricola').value.trim();
             const telefono = document.getElementById('profileTelefono').value.trim();
 
             try {
                 const docRef = doc(db, "utenti", user.uid);
-                await setDoc(docRef, {
-                    nome: nome,
-                    cognome: cognome,
-                    matricola: matricola,
-                    telefono: telefono
-                }, { merge: true });
-                
+                await setDoc(docRef, { nome: nome, cognome: cognome, mansione: mansione, matricola: matricola, telefono: telefono }, { merge: true });
                 alert("✅ Profilo salvato correttamente!");
                 document.getElementById('profileModal').style.display = 'none';
             } catch (e) {
@@ -329,7 +251,6 @@
                 statusText.innerHTML = `☁️ Online`;
                 profileEmail.value = user.email;
 
-                // Carica i dati del profilo esistenti
                 try {
                     const docRef = doc(db, "utenti", user.uid);
                     const docSnap = await getDoc(docRef);
@@ -337,6 +258,7 @@
                         const data = docSnap.data();
                         document.getElementById('profileNome').value = data.nome || '';
                         document.getElementById('profileCognome').value = data.cognome || '';
+                        document.getElementById('profileMansione').value = data.mansione || '';
                         document.getElementById('profileMatricola').value = data.matricola || '';
                         document.getElementById('profileTelefono').value = data.telefono || '';
                     }
@@ -351,4 +273,3 @@
     </script>
 </body>
 </html>
- 
