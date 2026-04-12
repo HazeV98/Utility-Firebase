@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility - Rubrica Colleghi</title>
+    <meta name="theme-color" content="#0056b3">
+
+    <style>
+        :root {
+            --primary: #0056b3;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 { margin: 0; color: var(--primary); font-size: 24px; }
+
+        .view-container {
+            width: 100%;
+            max-width: 400px;
+            display: none; /* Nascosto di default, gestito via JS */
+            flex-direction: column;
+            gap: 15px;
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+
+        .btn-action {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-action:active { opacity: 0.8; }
+
+        .btn-danger-outline {
+            background: transparent;
+            color: var(--danger);
+            border: 2px solid var(--danger);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        /* Stili Lista Contatti */
+        #search-bar {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .contact-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .contact-info { text-align: left; }
+        .contact-name { font-weight: bold; font-size: 16px; color: var(--primary); margin-bottom: 4px; text-transform: capitalize; }
+        .contact-matricola { font-size: 12px; color: #666; }
+
+        .contact-actions { display: flex; gap: 10px; }
+        .action-icon {
+            background: #e9ecef;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 20px;
+            color: var(--text-color);
+        }
+
+        /* MODALE PROFILO */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center;
+            z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px);
+        }
+        
+        .modal-content {
+            background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px;
+            text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative;
+        }
+
+        .input-field {
+            width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef;
+            border-radius: 8px; box-sizing: border-box; font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" style="text-decoration: none; font-size: 24px; color: var(--primary);">←</a>
+        <h2>📖 Rubrica</h2>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div id="view-no-auth" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--danger);">Accesso Richiesto</h3>
+            <p style="color: #666; font-size: 15px; line-height: 1.5;">
+                La rubrica è un'area protetta riservata ai colleghi. Per accedere devi effettuare il login tramite il Cloud nella Home page.
+            </p>
+            <button class="btn-action" style="background-color: var(--primary);" onclick="window.location.href='index.html'">Torna alla Home</button>
+        </div>
+    </div>
+
+    <div id="view-opt-in" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--primary); margin-top: 0;">🤝 Community</h3>
+            <p style="color: #666; font-size: 15px; line-height: 1.5;">
+                Questa rubrica contiene i numeri di telefono dei colleghi che hanno deciso di condividerli. <br><br>
+                <b>Solo chi condivide il proprio numero può visualizzare quello degli altri.</b> Vuoi unirti?
+            </p>
+            <button class="btn-action" onclick="avviaCondivisione()">Condividi il tuo numero</button>
+        </div>
+    </div>
+
+    <div id="view-directory" class="view-container">
+        <input type="text" id="search-bar" placeholder="🔍 Cerca per nome o cognome..." oninput="filtraRubrica()">
+        <div id="contacts-list" style="width: 100%;">
+            </div>
+        <button class="btn-danger-outline" onclick="revocaCondivisione()">Smetti di condividere</button>
+    </div>
+
+    <div id="view-loading" class="view-container" style="display: flex;">
+        <p style="color: #666;">Verifica autorizzazioni in corso...</p>
+    </div>
+
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-content">
+            <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('profileModal').style.display='none'">&times;</span>
+            <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Completa il Profilo</h3>
+            <p style="font-size: 13px; color: #666; text-align: center; margin-bottom: 20px;">
+                Per entrare in rubrica abbiamo bisogno dei tuoi dati.
+            </p>
+            
+            <input type="text" id="regNome" class="input-field" placeholder="Nome">
+            <input type="text" id="regCognome" class="input-field" placeholder="Cognome">
+            <input type="text" id="regMatricola" class="input-field" placeholder="Matricola">
+            <input type="tel" id="regTelefono" class="input-field" placeholder="Numero di Telefono">
+
+            <button id="btnSalva" class="btn-action" onclick="salvaECondividi()">Salva e Accedi</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4",
+          authDomain: "utility-haze.firebaseapp.com",
+          projectId: "utility-haze",
+          storageBucket: "utility-haze.firebasestorage.app",
+          messagingSenderId: "686237947418",
+          appId: "1:686237947418:web:f03ba19ab8fff43110a3a3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let userData = {};
+        let listaContatti = []; // Cache locale per la ricerca
+
+        // Nasconde tutte le viste
+        function nascondiTutto() {
+            document.getElementById('view-no-auth').style.display = 'none';
+            document.getElementById('view-opt-in').style.display = 'none';
+            document.getElementById('view-directory').style.display = 'none';
+            document.getElementById('view-loading').style.display = 'none';
+        }
+
+        // Verifica Stato Autenticazione
+        onAuthStateChanged(auth, async (user) => {
+            nascondiTutto();
+            if (user) {
+                currentUser = user;
+                document.getElementById('view-loading').style.display = 'flex';
+                await caricaStatoUtente();
+            } else {
+                document.getElementById('view-no-auth').style.display = 'flex';
+            }
+        });
+
+        // Controlla se l'utente ha già accettato la condivisione
+        async function caricaStatoUtente() {
+            try {
+                const docRef = doc(db, "utenti", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    userData = docSnap.data();
+                    if (userData.condivide_numero === true) {
+                        nascondiTutto();
+                        document.getElementById('view-directory').style.display = 'flex';
+                        caricaRubricaGenerale();
+                    } else {
+                        nascondiTutto();
+                        document.getElementById('view-opt-in').style.display = 'flex';
+                    }
+                } else {
+                    nascondiTutto();
+                    document.getElementById('view-opt-in').style.display = 'flex';
+                }
+            } catch (error) {
+                console.error("Errore:", error);
+                alert("Errore di connessione.");
+            }
+        }
+
+        // Click su "Condividi il tuo numero"
+        window.avviaCondivisione = function() {
+            const haTuttiIDati = userData.nome && userData.cognome && userData.matricola && userData.telefono;
+            
+            if (haTuttiIDati) {
+                // Se il profilo è già completo da index.html, salta il form e attiva subito
+                salvaCondivisione(userData.nome, userData.cognome, userData.matricola, userData.telefono);
+            } else {
+                // Altrimenti apri il modale per fargli inserire i dati mancanti
+                document.getElementById('regNome').value = userData.nome || "";
+                document.getElementById('regCognome').value = userData.cognome || "";
+                document.getElementById('regMatricola').value = userData.matricola || "";
+                document.getElementById('regTelefono').value = userData.telefono || "";
+                document.getElementById('profileModal').style.display = 'flex';
+            }
+        };
+
+        // Click su "Salva e Accedi" nel Modale
+        window.salvaECondividi = function() {
+            const nome = document.getElementById('regNome').value.trim();
+            const cognome = document.getElementById('regCognome').value.trim();
+            const matricola = document.getElementById('regMatricola').value.trim();
+            const telefono = document.getElementById('regTelefono').value.trim();
+
+            if (!nome || !cognome || !telefono) {
+                alert("Nome, Cognome e Telefono sono obbligatori per la rubrica.");
+                return;
+            }
+
+            document.getElementById('btnSalva').innerText = "Salvataggio...";
+            salvaCondivisione(nome, cognome, matricola, telefono);
+        };
+
+        // Funzione per scrivere sul Cloud e cambiare stato
+        async function salvaCondivisione(n, c, m, t) {
+            try {
+                const docRef = doc(db, "utenti", currentUser.uid);
+                await setDoc(docRef, {
+                    nome: n,
+                    cognome: c,
+                    matricola: m,
+                    telefono: t,
+                    condivide_numero: true // Flag magico attivato!
+                }, { merge: true });
+
+                document.getElementById('profileModal').style.display = 'none';
+                nascondiTutto();
+                document.getElementById('view-directory').style.display = 'flex';
+                caricaRubricaGenerale();
+
+            } catch (error) {
+                alert("Errore durante il salvataggio.");
+                console.error(error);
+                document.getElementById('btnSalva').innerText = "Salva e Accedi";
+            }
+        }
+
+        // Tasto in fondo per togliersi dalla rubrica
+        window.revocaCondivisione = async function() {
+            if(!confirm("Se smetti di condividere il tuo numero non potrai più vedere la rubrica. Continuare?")) return;
+            
+            try {
+                const docRef = doc(db, "utenti", currentUser.uid);
+                await setDoc(docRef, { condivide_numero: false }, { merge: true }); // Disattiva il flag
+                nascondiTutto();
+                document.getElementById('view-opt-in').style.display = 'flex';
+            } catch (error) { alert("Errore di revoca."); }
+        };
+
+        // Scarica la lista dei contatti
+        async function caricaRubricaGenerale() {
+            const listDiv = document.getElementById('contacts-list');
+            listDiv.innerHTML = "<p style='color:#666;'>Caricamento rubrica...</p>";
+
+            try {
+                // Prende da Firebase SOLO gli utenti che hanno condivide_numero = true
+                const q = query(collection(db, "utenti"), where("condivide_numero", "==", true));
+                const querySnapshot = await getDocs(q);
+                
+                listaContatti = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if(data.nome && data.cognome) { // Ignora se ci sono dati corrotti
+                        listaContatti.push(data);
+                    }
+                });
+
+                // Ordine Alfabetico per Cognome e poi Nome
+                listaContatti.sort((a, b) => {
+                    let nomeA = (a.cognome + " " + a.nome).toLowerCase();
+                    let nomeB = (b.cognome + " " + b.nome).toLowerCase();
+                    return nomeA.localeCompare(nomeB);
+                });
+
+                disegnaContatti(listaContatti);
+
+            } catch (error) {
+                listDiv.innerHTML = "<p style='color:var(--danger);'>Errore nel recupero dati.</p>";
+                console.error(error);
+            }
+        }
+
+        // Renderizza l'HTML dei contatti
+        function disegnaContatti(arrayContatti) {
+            const listDiv = document.getElementById('contacts-list');
+            listDiv.innerHTML = "";
+
+            if (arrayContatti.length === 0) {
+                listDiv.innerHTML = "<p style='color:#666;'>Nessun contatto trovato.</p>";
+                return;
+            }
+
+            arrayContatti.forEach(c => {
+                const item = document.createElement('div');
+                item.className = "contact-item";
+                
+                // Formatta il nome per evitare "mario rossi", ma renderlo "Mario Rossi"
+                const nomeCap = c.nome.charAt(0).toUpperCase() + c.nome.slice(1).toLowerCase();
+                const cognomeCap = c.cognome.charAt(0).toUpperCase() + c.cognome.slice(1).toLowerCase();
+                const numTel = c.telefono.replace(/\s+/g, ''); // Togli gli spazi per il link
+
+                item.innerHTML = `
+                    <div class="contact-info">
+                        <div class="contact-name">${cognomeCap} ${nomeCap}</div>
+                        <div class="contact-matricola">Matricola: ${c.matricola || 'N/D'}</div>
+                    </div>
+                    <div class="contact-actions">
+                        <a href="tel:${numTel}" class="action-icon" title="Chiama">📞</a>
+                        <a href="https://wa.me/39${numTel}" target="_blank" class="action-icon" title="WhatsApp" style="color: #25D366;">💬</a>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        // Motore di ricerca istantaneo
+        window.filtraRubrica = function() {
+            const termine = document.getElementById('search-bar').value.toLowerCase().trim();
+            if (!termine) {
+                disegnaContatti(listaContatti);
+                return;
+            }
+            
+            const filtrati = listaContatti.filter(c => {
+                const completo = (c.nome + " " + c.cognome).toLowerCase();
+                const completoInverso = (c.cognome + " " + c.nome).toLowerCase();
+                return completo.includes(termine) || completoInverso.includes(termine);
+            });
+            
+            disegnaContatti(filtrati);
+        };
+    </script>
+</body>
+</html>
+ 
