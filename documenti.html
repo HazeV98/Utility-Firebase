@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility - Documenti</title>
+    <style>
+        :root { --primary: #0056b3; --bg-color: #f4f7f6; --text-color: #333; }
+        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h2 { margin: 0; color: var(--primary); font-size: 24px; }
+        #content-area { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
+        .file-btn { background-color: var(--primary); color: white; border: none; padding: 15px; font-size: 16px; border-radius: 10px; cursor: pointer; text-decoration: none; text-align: center; flex: 1; font-weight: 500; }
+        .file-row { display: flex; gap: 10px; width: 100%; }
+        .download-btn { background-color: white; border: 2px solid var(--primary); color: var(--primary); padding: 10px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 45px; font-size: 20px; }
+        .status-message { color: #666; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" style="text-decoration: none; font-size: 24px; color: var(--primary);">←</a>
+        <h2>📄 Documenti</h2>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div id="content-area">
+        <div class="status-message">Caricamento documenti...</div>
+    </div>
+
+    <script>
+        const CARTELLA_DOCS = "documenti";
+
+        async function downloadForzato(url, filename) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const urlBlob = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = urlBlob; a.download = filename;
+                document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(urlBlob);
+            } catch (e) { window.open(url, '_blank'); }
+        }
+
+        async function init() {
+            const area = document.getElementById('content-area');
+            try {
+                const resMappa = await fetch('mappa_file.json?t=' + new Date().getTime());
+                if (!resMappa.ok) throw new Error();
+                const datiMappa = await resMappa.json();
+                
+                // Filtra i file che si trovano nella cartella "documenti"
+                const files = datiMappa.albero
+                    .filter(p => p.startsWith(CARTELLA_DOCS + "/") && p.split('/').length === 2)
+                    .map(p => p.split('/')[1]);
+
+                area.innerHTML = "";
+                if (files.length === 0) {
+                    area.innerHTML = `<div class="status-message">Nessun documento presente in archivio.</div>`;
+                    return;
+                }
+
+                files.sort((a, b) => a.localeCompare(b));
+
+                files.forEach(nomeOriginale => {
+                    let nomeVis = nomeOriginale.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                    nomeVis = nomeVis.charAt(0).toUpperCase() + nomeVis.slice(1);
+
+                    const row = document.createElement('div'); row.className = "file-row";
+                    const aOpen = document.createElement('a');
+                    aOpen.className = "file-btn"; aOpen.innerText = nomeVis;
+                    aOpen.href = `${CARTELLA_DOCS}/${nomeOriginale}`;
+                    aOpen.target = "_blank";
+
+                    const aDown = document.createElement('div');
+                    aDown.className = "download-btn"; aDown.innerHTML = "⬇️";
+                    aDown.onclick = () => downloadForzato(`${CARTELLA_DOCS}/${nomeOriginale}`, nomeOriginale);
+
+                    row.appendChild(aOpen); row.appendChild(aDown); area.appendChild(row);
+                });
+            } catch (e) { 
+                area.innerHTML = `<div class="status-message">Errore: mappa_file.json non trovata.<br>Vai in Admin e clicca 'Forza Creazione Mappa'.</div>`; 
+            }
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
+
