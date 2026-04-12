@@ -49,6 +49,9 @@
         <div class="card" style="text-align: center;">
             <h3 style="color: var(--primary); margin-top: 0;">🤝 Community</h3>
             <p style="color: #666; font-size: 15px; line-height: 1.5;">Questa rubrica contiene i numeri di telefono dei colleghi che hanno deciso di condividerli. <br><br><b>Solo chi condivide il proprio numero può visualizzare quello degli altri.</b> Vuoi unirti?</p>
+            <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 15px; text-align: left;">
+                ⚠️ <b>Regola Anti-Furbetti:</b> Puoi revocare la condivisione del tuo numero un massimo di <b>3 volte</b>. Superato il limite, il sistema ti bloccherà permanentemente l'accesso alla rubrica per evitare abusi.
+            </div>
             <button class="btn-action" onclick="avviaCondivisione()">Condividi il tuo numero</button>
         </div>
     </div>
@@ -57,6 +60,17 @@
         <input type="text" id="search-bar" placeholder="🔍 Cerca..." oninput="filtraRubrica()">
         <div id="contacts-list" style="width: 100%;"></div>
         <button class="btn-danger-outline" onclick="revocaCondivisione()">Smetti di condividere</button>
+    </div>
+
+    <div id="view-blocked" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--danger); margin-top: 0;">🚫 Accesso Bloccato</h3>
+            <p style="color: #666; font-size: 15px; line-height: 1.5;">
+                Hai rimosso il tuo numero dalla rubrica per 3 volte consecutive.<br><br>
+                Per proteggere la community da comportamenti scorretti, il tuo accesso alla funzione rubrica è stato bloccato definitivamente.
+            </p>
+            <button class="btn-action" style="background-color: #6c757d;" onclick="window.location.href='index.html'">Torna alla Home</button>
+        </div>
     </div>
 
     <div id="view-loading" class="view-container" style="display: flex;">
@@ -115,6 +129,7 @@
             document.getElementById('view-no-auth').style.display = 'none';
             document.getElementById('view-opt-in').style.display = 'none';
             document.getElementById('view-directory').style.display = 'none';
+            document.getElementById('view-blocked').style.display = 'none';
             document.getElementById('view-loading').style.display = 'none';
         }
 
@@ -131,16 +146,32 @@
 
         async function caricaStatoUtente() {
             try {
+                // Leggiamo prima i dati privati per verificare contatori e blocchi
+                const utenteRef = doc(db, "utenti", currentUser.uid);
+                const utenteSnap = await getDoc(utenteRef);
+                
+                if (utenteSnap.exists()) {
+                    userDataPrivate = utenteSnap.data();
+                    
+                    // CONTROLLO BLOCCO
+                    if (userDataPrivate.revoche_rubrica >= 3) {
+                        nascondiTutto();
+                        document.getElementById('view-blocked').style.display = 'flex';
+                        // Per sicurezza, lo rimuove dalla rubrica pubblica se c'era rimasto
+                        try { await deleteDoc(doc(db, "rubrica", currentUser.uid)); } catch(e){}
+                        return; // Ferma il caricamento qui
+                    }
+                }
+
+                // Se non è bloccato, controlla se ha condiviso il numero
                 const rubricaRef = doc(db, "rubrica", currentUser.uid);
                 const rubricaSnap = await getDoc(rubricaRef);
+                
                 if (rubricaSnap.exists()) {
                     nascondiTutto();
                     document.getElementById('view-directory').style.display = 'flex';
                     caricaRubricaGenerale();
                 } else {
-                    const utenteRef = doc(db, "utenti", currentUser.uid);
-                    const utenteSnap = await getDoc(utenteRef);
-                    if (utenteSnap.exists()) userDataPrivate = utenteSnap.data();
                     nascondiTutto();
                     document.getElementById('view-opt-in').style.display = 'flex';
                 }
@@ -148,7 +179,6 @@
         }
 
         window.avviaCondivisione = function() {
-            // Controlla se ha compilato i dati importanti (ora include anche la mansione)
             const haTuttiIDati = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.mansione && userDataPrivate.telefono;
             
             if (haTuttiIDati) {
@@ -170,7 +200,6 @@
             const m = document.getElementById('regMatricola').value.trim();
             const t = document.getElementById('regTelefono').value.trim();
             
-            // Richiede Nome, Cognome, Mansione e Telefono (Matricola facoltativa)
             if (!n || !c || !ms || !t) return alert("Nome, Cognome, Mansione e Telefono sono obbligatori.");
             
             document.getElementById('btnSalva').innerText = "Salvataggio...";
@@ -189,12 +218,29 @@
         }
 
         window.revocaCondivisione = async function() {
-            if(!confirm("Vuoi smettere di condividere?")) return;
+            let revocheAttuali = userDataPrivate.revoche_rubrica || 0;
+            let revocheRimanenti = 2 - revocheAttuali; // Se ne ha fatte 0, ne restano 2. Se 2, restano 0.
+            
+            let msg = `ATTENZIONE: Stai per togliere il tuo numero dalla rubrica.\n\nHai ancora ${revocheRimanenti} tentativi prima di essere BLOCCATO DEFINITIVAMENTE. Vuoi procedere?`;
+            
+            if(!confirm(msg)) return;
+            
             try {
+                // 1. Lo cancella dalla rubrica pubblica
                 await deleteDoc(doc(db, "rubrica", currentUser.uid)); 
+                
+                // 2. Aumenta il contatore nel profilo privato
+                let nuovoConteggio = revocheAttuali + 1;
+                await setDoc(doc(db, "utenti", currentUser.uid), { revoche_rubrica: nuovoConteggio }, { merge: true });
+                userDataPrivate.revoche_rubrica = nuovoConteggio; // aggiorna variabile locale
+                
                 nascondiTutto();
-                document.getElementById('view-opt-in').style.display = 'flex';
-            } catch (error) { alert("Errore."); }
+                if (nuovoConteggio >= 3) {
+                    document.getElementById('view-blocked').style.display = 'flex';
+                } else {
+                    document.getElementById('view-opt-in').style.display = 'flex';
+                }
+            } catch (error) { alert("Errore durante la revoca."); }
         };
 
         async function caricaRubricaGenerale() {
@@ -209,13 +255,13 @@
                 });
                 listaContatti.sort((a, b) => (a.cognome + " " + a.nome).toLowerCase().localeCompare((b.cognome + " " + b.nome).toLowerCase()));
                 disegnaContatti(listaContatti);
-            } catch (error) { listDiv.innerHTML = "<p>Errore.</p>"; }
+            } catch (error) { listDiv.innerHTML = "<p>Errore nel caricamento della lista.</p>"; }
         }
 
         function disegnaContatti(arrayContatti) {
             const listDiv = document.getElementById('contacts-list');
             listDiv.innerHTML = "";
-            if (arrayContatti.length === 0) return listDiv.innerHTML = "<p style='color:#666;'>Nessun contatto.</p>";
+            if (arrayContatti.length === 0) return listDiv.innerHTML = "<p style='color:#666;'>Nessun contatto presente.</p>";
             
             arrayContatti.forEach(c => {
                 const item = document.createElement('div'); item.className = "contact-item";
@@ -260,4 +306,3 @@
     </script>
 </body>
 </html>
- 
