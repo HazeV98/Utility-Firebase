@@ -51,6 +51,13 @@
         .btn-modal { border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%; margin-top: 10px; }
         #secret-btn, #generatore-btn { display: none; background-color: var(--danger); }
         #rotazioni-btn { display: none; }
+        
+        /* Banner Avviso Strike */
+        #profileStrikes {
+            font-size: 12px; color: #856404; background: #fff3cd; padding: 10px; 
+            border-radius: 8px; margin-bottom: 15px; text-align: center; display: none;
+            border: 1px solid #ffeeba;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +101,10 @@
             <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('profileModal').style.display='none'">&times;</span>
             <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Profilo Utente</h3>
             
+            <div id="profileStrikes">
+                ⚠️ Revoche rubrica usate: <b id="strikeCount">0</b> su 3
+            </div>
+
             <label style="font-size: 12px; color: #666; font-weight: bold;">Email:</label>
             <input type="text" id="profileEmail" class="input-field" disabled style="background: #f8f9fa;">
             
@@ -262,6 +273,21 @@
                         document.getElementById('profileMansione').value = data.mansione || '';
                         document.getElementById('profileMatricola').value = data.matricola || '';
                         document.getElementById('profileTelefono').value = data.telefono || '';
+                        
+                        // Gestione Contatore Strike
+                        const strikes = data.revoche_rubrica || 0;
+                        if (strikes > 0) {
+                            document.getElementById('profileStrikes').style.display = 'block';
+                            document.getElementById('strikeCount').innerText = strikes;
+                            if (strikes >= 3) {
+                                document.getElementById('profileStrikes').style.color = '#721c24';
+                                document.getElementById('profileStrikes').style.backgroundColor = '#f8d7da';
+                                document.getElementById('profileStrikes').style.borderColor = '#f5c6cb';
+                                document.getElementById('profileStrikes').innerHTML = '🚫 <b>Accesso Rubrica Bloccato:</b> Limite revoche superato.';
+                            }
+                        } else {
+                            document.getElementById('profileStrikes').style.display = 'none';
+                        }
                     }
                 } catch(e) { console.error("Errore caricamento profilo:", e); }
                 
@@ -274,3 +300,4 @@
     </script>
 </body>
 </html>
+ 
