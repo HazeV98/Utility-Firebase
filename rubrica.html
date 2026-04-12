@@ -32,10 +32,31 @@
 <body>
 
     <div class="header">
-        <a href="index.html" style="text-decoration: none; font-size: 24px; color: var(--primary);">←</a>
-        <h2>📖 Rubrica</h2>
-        <div style="width: 24px;"></div>
+        <button class="hamburger-btn" onclick="apriMenuLaterale()">☰</button>
+        <h2>Rubrica</h2>
+        <div style="width: 50px;"></div>
     </div>
+
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="chiudiMenuLaterale()"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3 style="margin:0; color:white;">Menu</h3>
+            <button style="background:none; border:none; color:white; font-size:24px; cursor:pointer;" onclick="chiudiMenuLaterale()">✕</button>
+        </div>
+        <a href="index.html" class="sidebar-link">🏠 Home Page</a>
+        <a href="calendario.html" class="sidebar-link">📅 Calendario</a>
+        <a href="dati_calendario.html" class="sidebar-link">📊 Statistiche Calendario</a>
+        <a href="turni.html" class="sidebar-link">🔄 Turni</a>
+        <a href="rubrica.html" class="sidebar-link" style="background-color: #f4f7f6; color: var(--primary); font-weight: bold;">📞 Rubrica Colleghi</a>
+        <a href="rotazione_ferie.html" class="sidebar-link">🌴 Rotazione Ferie</a>
+        <a href="orari.html" class="sidebar-link">🕒 Orari</a>
+        <a href="documenti.html" class="sidebar-link">📄 Documenti</a>
+        <a href="link.html" class="sidebar-link">🔗 Link</a>
+        <a href="contatti.html" class="sidebar-link">📞 Contatti</a>
+        <a href="buoni.html" class="sidebar-link">🍝 Buoni Pasto</a>
+        <a href="dds.html" class="sidebar-link">📂 Archivio DDS</a>
+        <a href="guida.html" class="sidebar-link">📖 Guida</a>
+    </div> 
 
     <div id="view-no-auth" class="view-container">
         <div class="card" style="text-align: center;">
