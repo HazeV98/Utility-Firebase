@@ -53,7 +53,7 @@
     </div>
 
     <div id="view-directory" class="view-container">
-        <input type="text" id="search-bar" placeholder="🔍 Cerca per nome o cognome..." oninput="filtraRubrica()">
+        <input type="text" id="search-bar" placeholder="🔍 Cerca nome, cognome o matricola..." oninput="filtraRubrica()">
         <div id="contacts-list" style="width: 100%;"></div>
         <button class="btn-danger-outline" onclick="revocaCondivisione()">Smetti di condividere</button>
     </div>
@@ -117,7 +117,6 @@
 
         async function caricaStatoUtente() {
             try {
-                // 1. Controlla prima se è già nella rubrica pubblica
                 const rubricaRef = doc(db, "rubrica", currentUser.uid);
                 const rubricaSnap = await getDoc(rubricaRef);
                 
@@ -126,7 +125,6 @@
                     document.getElementById('view-directory').style.display = 'flex';
                     caricaRubricaGenerale();
                 } else {
-                    // 2. Se non c'è, scarica i dati privati per precompilare il modulo
                     const utenteRef = doc(db, "utenti", currentUser.uid);
                     const utenteSnap = await getDoc(utenteRef);
                     if (utenteSnap.exists()) userDataPrivate = utenteSnap.data();
@@ -159,7 +157,6 @@
             
             document.getElementById('btnSalva').innerText = "Salvataggio...";
             
-            // Salva anche nel profilo privato per non farglieli rimettere in futuro
             try { await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, matricola: m, telefono: t }, { merge: true }); } catch(e){}
             
             salvaCondivisione(n, c, m, t);
@@ -167,7 +164,6 @@
 
         async function salvaCondivisione(n, c, m, t) {
             try {
-                // CREA IL DOCUMENTO NELLA NUOVA CARTELLA "rubrica"
                 const docRef = doc(db, "rubrica", currentUser.uid);
                 await setDoc(docRef, { nome: n, cognome: c, matricola: m, telefono: t });
 
@@ -181,7 +177,6 @@
         window.revocaCondivisione = async function() {
             if(!confirm("Se smetti di condividere non potrai più vedere la rubrica. Continuare?")) return;
             try {
-                // CANCELLA FISICAMENTE IL DOCUMENTO DALLA RUBRICA
                 await deleteDoc(doc(db, "rubrica", currentUser.uid)); 
                 nascondiTutto();
                 document.getElementById('view-opt-in').style.display = 'flex';
@@ -192,7 +187,6 @@
             const listDiv = document.getElementById('contacts-list');
             listDiv.innerHTML = "<p style='color:#666;'>Caricamento rubrica...</p>";
             try {
-                // Prende tutti i documenti dalla cartella pubblica "rubrica"
                 const querySnapshot = await getDocs(collection(db, "rubrica"));
                 listaContatti = [];
                 querySnapshot.forEach((doc) => {
@@ -220,6 +214,9 @@
                 const nomeCap = c.nome.charAt(0).toUpperCase() + c.nome.slice(1).toLowerCase();
                 const cognomeCap = c.cognome.charAt(0).toUpperCase() + c.cognome.slice(1).toLowerCase();
                 const numTel = c.telefono.replace(/\s+/g, '');
+                
+                // SVG del logo di WhatsApp
+                const waIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
 
                 item.innerHTML = `
                     <div class="contact-info">
@@ -228,7 +225,7 @@
                     </div>
                     <div class="contact-actions">
                         <a href="tel:${numTel}" class="action-icon" title="Chiama">📞</a>
-                        <a href="https://wa.me/39${numTel}" target="_blank" class="action-icon" title="WhatsApp" style="color: #25D366;">💬</a>
+                        <a href="https://wa.me/39${numTel}" target="_blank" class="action-icon" title="WhatsApp" style="background: transparent;">${waIcon}</a>
                     </div>
                 `;
                 listDiv.appendChild(item);
@@ -239,7 +236,10 @@
             const termine = document.getElementById('search-bar').value.toLowerCase().trim();
             if (!termine) return disegnaContatti(listaContatti);
             const filtrati = listaContatti.filter(c => {
-                return (c.nome + " " + c.cognome).toLowerCase().includes(termine) || (c.cognome + " " + c.nome).toLowerCase().includes(termine);
+                const nomeCognome = (c.nome + " " + c.cognome).toLowerCase();
+                const cognomeNome = (c.cognome + " " + c.nome).toLowerCase();
+                const matricola = (c.matricola || "").toLowerCase();
+                return nomeCognome.includes(termine) || cognomeNome.includes(termine) || matricola.includes(termine);
             });
             disegnaContatti(filtrati);
         };
