@@ -49,8 +49,8 @@
         <div class="card" style="text-align: center;">
             <h3 style="color: var(--primary); margin-top: 0;">🤝 Community</h3>
             <p style="color: #666; font-size: 15px; line-height: 1.5;">Questa rubrica contiene i numeri di telefono dei colleghi che hanno deciso di condividerli. <br><br><b>Solo chi condivide il proprio numero può visualizzare quello degli altri.</b> Vuoi unirti?</p>
-            <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 15px; text-align: left;">
-                ⚠️ <b>Regola Anti-Furbetti:</b> Puoi revocare la condivisione del tuo numero un massimo di <b>3 volte</b>. Superato il limite, il sistema ti bloccherà permanentemente l'accesso alla rubrica per evitare abusi.
+            <div id="strike-warning" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 15px; text-align: left;">
+                ⚠️ <b>Regola Anti-Furbetti:</b> Se revocherai ripetutamente la condivisione del tuo numero il sistema ti bloccherà permanentemente l'accesso alla rubrica.
             </div>
             <button class="btn-action" onclick="avviaCondivisione()">Condividi il tuo numero</button>
         </div>
@@ -124,6 +124,9 @@
         let currentUser = null;
         let userDataPrivate = {};
         let listaContatti = [];
+        
+        // Controlla se il dispositivo ha i privilegi di Admin
+        const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
         function nascondiTutto() {
             document.getElementById('view-no-auth').style.display = 'none';
@@ -146,24 +149,26 @@
 
         async function caricaStatoUtente() {
             try {
-                // Leggiamo prima i dati privati per verificare contatori e blocchi
                 const utenteRef = doc(db, "utenti", currentUser.uid);
                 const utenteSnap = await getDoc(utenteRef);
                 
                 if (utenteSnap.exists()) {
                     userDataPrivate = utenteSnap.data();
                     
-                    // CONTROLLO BLOCCO
-                    if (userDataPrivate.revoche_rubrica >= 3) {
+                    // L'Admin bypassa il blocco
+                    if (userDataPrivate.revoche_rubrica >= 3 && !isAdmin) {
                         nascondiTutto();
                         document.getElementById('view-blocked').style.display = 'flex';
-                        // Per sicurezza, lo rimuove dalla rubrica pubblica se c'era rimasto
                         try { await deleteDoc(doc(db, "rubrica", currentUser.uid)); } catch(e){}
-                        return; // Ferma il caricamento qui
+                        return; 
                     }
                 }
 
-                // Se non è bloccato, controlla se ha condiviso il numero
+                // Nasconde l'avviso dei furbetti se sei Admin
+                if (isAdmin) {
+                    document.getElementById('strike-warning').style.display = 'none';
+                }
+
                 const rubricaRef = doc(db, "rubrica", currentUser.uid);
                 const rubricaSnap = await getDoc(rubricaRef);
                 
@@ -218,21 +223,31 @@
         }
 
         window.revocaCondivisione = async function() {
+            // Logica bypass per Amministratore
+            if (isAdmin) {
+                if(!confirm("🛠️ SEI AMMINISTRATORE.\nLa revoca non consumerà tentativi. Continuare?")) return;
+                try {
+                    await deleteDoc(doc(db, "rubrica", currentUser.uid));
+                    nascondiTutto();
+                    document.getElementById('view-opt-in').style.display = 'flex';
+                } catch (error) { alert("Errore durante la revoca."); }
+                return;
+            }
+
+            // Logica standard
             let revocheAttuali = userDataPrivate.revoche_rubrica || 0;
-            let revocheRimanenti = 2 - revocheAttuali; // Se ne ha fatte 0, ne restano 2. Se 2, restano 0.
+            let revocheRimanenti = 2 - revocheAttuali; 
             
             let msg = `ATTENZIONE: Stai per togliere il tuo numero dalla rubrica.\n\nHai ancora ${revocheRimanenti} tentativi prima di essere BLOCCATO DEFINITIVAMENTE. Vuoi procedere?`;
             
             if(!confirm(msg)) return;
             
             try {
-                // 1. Lo cancella dalla rubrica pubblica
                 await deleteDoc(doc(db, "rubrica", currentUser.uid)); 
                 
-                // 2. Aumenta il contatore nel profilo privato
                 let nuovoConteggio = revocheAttuali + 1;
                 await setDoc(doc(db, "utenti", currentUser.uid), { revoche_rubrica: nuovoConteggio }, { merge: true });
-                userDataPrivate.revoche_rubrica = nuovoConteggio; // aggiorna variabile locale
+                userDataPrivate.revoche_rubrica = nuovoConteggio;
                 
                 nascondiTutto();
                 if (nuovoConteggio >= 3) {
@@ -306,3 +321,4 @@
     </script>
 </body>
 </html>
+ 
