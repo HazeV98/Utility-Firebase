@@ -52,12 +52,8 @@
         #secret-btn, #generatore-btn { display: none; background-color: var(--danger); }
         #rotazioni-btn { display: none; }
         
-        /* Banner Avviso Strike */
-        #profileStrikes {
-            font-size: 12px; color: #856404; background: #fff3cd; padding: 10px; 
-            border-radius: 8px; margin-bottom: 15px; text-align: center; display: none;
-            border: 1px solid #ffeeba;
-        }
+        #profileStrikes { font-size: 12px; color: #856404; background: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; display: none; border: 1px solid #ffeeba; }
+        #adminBadge { display: none; background: #cce5ff; color: #004085; border: 1px dashed #0056b3; padding: 8px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -100,6 +96,8 @@
         <div class="modal-content">
             <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('profileModal').style.display='none'">&times;</span>
             <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Profilo Utente</h3>
+            
+            <div id="adminBadge">🛠️ Account Amministratore</div>
             
             <div id="profileStrikes">
                 ⚠️ Revoche rubrica usate: <b id="strikeCount">0</b> su 3
@@ -172,7 +170,10 @@
         const titleTrigger = document.getElementById('main-title');
         let tapCount = 0; let tapTimer; let holdTimer;
         document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('dev_mode_active') === 'true') document.getElementById('secret-btn').style.display = 'block';
+            if (localStorage.getItem('dev_mode_active') === 'true') {
+                document.getElementById('secret-btn').style.display = 'block';
+                document.getElementById('adminBadge').style.display = 'block'; // Mostra il badge
+            }
             if (localStorage.getItem('generatore_sbloccato') === 'true') document.getElementById('generatore-btn').style.display = 'block';
             const appDataStr = localStorage.getItem('myTurniApp');
             if (appDataStr && appDataStr.toLowerCase().includes('nove')) document.getElementById('rotazioni-btn').style.display = 'block';
@@ -274,9 +275,10 @@
                         document.getElementById('profileMatricola').value = data.matricola || '';
                         document.getElementById('profileTelefono').value = data.telefono || '';
                         
-                        // Gestione Contatore Strike
+                        const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
                         const strikes = data.revoche_rubrica || 0;
-                        if (strikes > 0) {
+                        
+                        if (strikes > 0 && !isAdmin) {
                             document.getElementById('profileStrikes').style.display = 'block';
                             document.getElementById('strikeCount').innerText = strikes;
                             if (strikes >= 3) {
