@@ -13,7 +13,6 @@
         if (datiImportati || codiceImportato) {
             if (datiImportati) localStorage.setItem('myTurniApp', datiImportati);
             if (codiceImportato) localStorage.setItem('auth_rotazioni', codiceImportato);
-            
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     </script>
@@ -181,7 +180,7 @@
             <label style="font-size: 12px; color: #666; font-weight: bold;">Matricola:</label>
             <input type="text" id="profileMatricola" class="input-field" placeholder="Inserisci matricola">
 
-            <button class="btn-modal" style="background: var(--success); color: white;" onclick="alert('Funzione di salvataggio in arrivo!')">Salva Modifiche</button>
+            <button id="btnSalvaProfilo" class="btn-modal" style="background: var(--success); color: white;" onclick="salvaProfilo()">Salva Modifiche</button>
             <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 20px 0;">
             <button class="btn-modal" style="background: #525f7f; color: white;" onclick="logout()">Esci (Logout)</button>
         </div>
@@ -213,21 +212,14 @@
         </div>
     </div>
 
-    <div class="feedback-section">
-        <p>Per feedback clicca l'icona qui sotto</p>
-        <a href="http://t.me/MattiaB1058" target="_blank" class="telegram-icon">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="#0088cc"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.45c.538-.196 1.006.128.832.941z"/></svg>
-        </a>
-    </div>
-
     <script>
-        // Logica Service Worker e Installazione
+        // Service Worker e Installazione
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'block'; });
         document.getElementById('install-btn').addEventListener('click', async () => { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } });
 
-        // Logica Sblocchi (Admin/Generatore)
+        // Logica Sblocchi
         const titleTrigger = document.getElementById('main-title');
         let tapCount = 0; let tapTimer; let holdTimer;
         document.addEventListener('DOMContentLoaded', () => {
@@ -251,7 +243,6 @@
         titleTrigger.addEventListener('mouseup', () => clearTimeout(holdTimer));
         titleTrigger.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // Placeholder per funzioni DDS (mantenute come nel tuo file originale)
         function checkLocalDDSReminders() {} 
         function checkDDSUpdates() {}
     </script>
@@ -262,6 +253,9 @@
             getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, 
             signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail 
         } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc 
+        } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4",
@@ -274,6 +268,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
         window.loginGoogle = () => signInWithPopup(auth, provider);
@@ -282,7 +277,39 @@
         window.recuperaPassword = () => sendPasswordResetEmail(auth, document.getElementById('emailInput').value).then(() => alert("Email inviata!"));
         window.logout = () => { signOut(auth); document.getElementById('profileModal').style.display='none'; };
 
-        onAuthStateChanged(auth, (user) => {
+        // --- FUNZIONE SALVATAGGIO PROFILO ---
+        window.salvaProfilo = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const btn = document.getElementById('btnSalvaProfilo');
+            btn.innerText = "⏳ Salvataggio...";
+            btn.disabled = true;
+
+            const nome = document.getElementById('profileNome').value.trim();
+            const cognome = document.getElementById('profileCognome').value.trim();
+            const matricola = document.getElementById('profileMatricola').value.trim();
+
+            try {
+                const docRef = doc(db, "utenti", user.uid);
+                await setDoc(docRef, {
+                    nome: nome,
+                    cognome: cognome,
+                    matricola: matricola
+                }, { merge: true });
+                
+                alert("✅ Profilo salvato correttamente!");
+                document.getElementById('profileModal').style.display = 'none';
+            } catch (e) {
+                console.error(e);
+                alert("❌ Errore durante il salvataggio.");
+            } finally {
+                btn.innerText = "Salva Modifiche";
+                btn.disabled = false;
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
             const btnLogin = document.getElementById('btnOpenLogin');
             const btnProfile = document.getElementById('btnOpenProfile');
             const statusText = document.getElementById('user-status');
@@ -295,6 +322,19 @@
                 statusText.style.display = 'block';
                 statusText.innerHTML = `☁️ Online`;
                 profileEmail.value = user.email;
+
+                // Carica i dati del profilo esistenti
+                try {
+                    const docRef = doc(db, "utenti", user.uid);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        document.getElementById('profileNome').value = data.nome || '';
+                        document.getElementById('profileCognome').value = data.cognome || '';
+                        document.getElementById('profileMatricola').value = data.matricola || '';
+                    }
+                } catch(e) { console.error("Errore caricamento profilo:", e); }
+                
             } else {
                 btnLogin.style.display = 'block';
                 btnProfile.style.display = 'none';
