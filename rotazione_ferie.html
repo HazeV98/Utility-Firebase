@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility - Rotazione Ferie</title>
+    <meta name="theme-color" content="#0056b3">
+
+    <style>
+        :root { --primary: #0056b3; --bg-color: #f4f7f6; --text-color: #333; --success: #28a745; --danger: #dc3545; --warning: #ffc107; }
+        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2 { margin: 0; color: var(--primary); font-size: 24px; }
+        .view-container { width: 100%; max-width: 400px; display: none; flex-direction: column; gap: 15px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; }
+        
+        .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
+        .btn-action:active { opacity: 0.8; }
+        .btn-danger-outline { background: transparent; color: var(--danger); border: 2px solid var(--danger); padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        
+        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white;}
+        .warning-box { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; font-size: 13px; text-align: left; margin-bottom: 15px; border: 1px solid #ffeeba; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; max-height: 90vh; overflow-y: auto;}
+        
+        /* Stili TABS */
+        .tabs { display: flex; background: #e9ecef; border-radius: 10px; overflow: hidden; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; color: #666; cursor: pointer; background: transparent; border: none; transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        /* Griglia Checkbox */
+        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #ddd;}
+        
+        /* Badge e Elementi Lista */
+        .badge-estivo { background: #ffeeba; color: #856404; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-invernale { background: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end;}
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" style="text-decoration: none; font-size: 24px; color: var(--primary);">←</a>
+        <h2>🏖️ Ferie</h2>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div id="view-no-auth" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--danger);">Accesso Richiesto</h3>
+            <p style="color: #666; font-size: 15px; line-height: 1.5;">Per vedere le rotazioni ferie dei colleghi devi effettuare il login tramite la Home page.</p>
+            <button class="btn-action" style="background-color: var(--primary);" onclick="window.location.href='index.html'">Torna alla Home</button>
+        </div>
+    </div>
+
+    <div id="view-opt-in" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--primary); margin-top: 0;">🤝 Condividi per accedere</h3>
+            <p style="color: #666; font-size: 14px; line-height: 1.5;">Come per la rubrica, solo chi condivide le proprie ferie programmate può cercare e proporre scambi con gli altri.</p>
+            <button class="btn-action" onclick="apriModaleCondivisione()">Inserisci le tue ferie</button>
+        </div>
+    </div>
+
+    <div id="view-main" class="view-container">
+        <div class="tabs">
+            <button id="tab-cerca" class="tab-btn active" onclick="switchTab('cerca')">🔍 Cerca Colleghi</button>
+            <button id="tab-bacheca" class="tab-btn" onclick="switchTab('bacheca')">📌 Bacheca Scambi</button>
+        </div>
+
+        <div id="panel-cerca">
+            <div class="card" style="padding: 15px;">
+                <label style="font-size: 12px; font-weight: bold; color: #666;">Anno di Ricerca:</label>
+                <input type="number" id="searchAnno" class="input-field" value="" onchange="eseguiRicerca()">
+                
+                <label style="font-size: 12px; font-weight: bold; color: #666;">Mansione:</label>
+                <select id="searchMansione" class="input-field" onchange="eseguiRicerca()">
+                    <option value="Tutte">Tutte le mansioni</option>
+                    <option value="Marinaio">Marinaio</option>
+                    <option value="Preposto al comando">Preposto al comando</option>
+                    <option value="Comandante">Comandante</option>
+                    <option value="Timoniere">Timoniere</option>
+                    <option value="Marinaio polivalente">Marinaio polivalente</option>
+                    <option value="Direttore di macchina">Direttore di macchina</option>
+                </select>
+
+                <label style="font-size: 12px; font-weight: bold; color: #666;">Cerca per Periodo (Opzionale):</label>
+                <select id="searchPeriodo" class="input-field" onchange="eseguiRicerca()">
+                    <option value="">Tutti i periodi</option>
+                    <optgroup label="Estive" id="optgroup-estive-ricerca"></optgroup>
+                    <optgroup label="Invernali" id="optgroup-invernali-ricerca"></optgroup>
+                </select>
+            </div>
+            <div id="risultati-ricerca"></div>
+            <button class="btn-danger-outline" onclick="revocaCondivisione()">Smetti di condividere ferie</button>
+        </div>
+
+        <div id="panel-bacheca" style="display: none;">
+            <button class="btn-action" style="margin-top: 0; margin-bottom: 15px;" onclick="apriModaleAnnuncio()">+ Inserisci Annuncio</button>
+            <div class="warning-box" style="text-align: center; margin-bottom: 15px;">
+                Filtro attivo: stai vedendo gli scambi per la tua mansione (<b><span id="label-mia-mansione"></span></b>)
+            </div>
+            <div id="lista-annunci"></div>
+        </div>
+    </div>
+
+    <div id="shareModal" class="modal-overlay">
+        <div class="modal-content">
+            <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('shareModal').style.display='none'">&times;</span>
+            <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Le tue Ferie</h3>
+            
+            <div class="warning-box">
+                ⚠️ <b>ATTENZIONE:</b> Inserisci i periodi che ti sono stati <b>ufficialmente assegnati</b> dalla rotazione, NON i periodi che hai eventualmente già scambiato. Questo permette al motore di calcolare correttamente gli anni futuri.
+            </div>
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Anno di Assegnazione (es. corrente):</label>
+            <input type="number" id="regAnno" class="input-field" value="">
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">La tua Mansione:</label>
+            <select id="regMansione" class="input-field">
+                <option value="">-- Seleziona Mansione --</option>
+                <option value="Marinaio">Marinaio</option>
+                <option value="Preposto al comando">Preposto al comando</option>
+                <option value="Comandante">Comandante</option>
+                <option value="Timoniere">Timoniere</option>
+                <option value="Marinaio polivalente">Marinaio polivalente</option>
+                <option value="Direttore di macchina">Direttore di macchina</option>
+            </select>
+
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Ferie Estive assegnate:</label>
+            <select id="regEstive" class="input-field"></select>
+
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Ferie Invernali assegnate:</label>
+            <select id="regInvernali" class="input-field"></select>
+
+            <button id="btnSalvaFerie" class="btn-action" onclick="salvaFerie()">Salva ed Entra</button>
+        </div>
+    </div>
+
+    <div id="adModal" class="modal-overlay">
+        <div class="modal-content">
+            <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('adModal').style.display='none'">&times;</span>
+            <h3 style="margin-top: 5px; color: #32325d;">Nuovo Scambio</h3>
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Cedo il mio periodo:</label>
+            <select id="adTipoFerie" class="input-field" onchange="aggiornaFormAnnuncio()">
+                <option value="estive">Estive</option>
+                <option value="invernali">Invernali</option>
+            </select>
+            <select id="adPeriodoOfferto" class="input-field"></select>
+
+            <label style="font-size: 12px; font-weight: bold; color: #666; margin-top: 10px; display: block;">Cerco in questi mesi (spunta):</label>
+            <div id="checkboxes-mesi" class="checkbox-grid"></div>
+
+            <button id="btnSalvaAnnuncio" class="btn-action" onclick="pubblicaAnnuncio()">Pubblica Annuncio</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4", authDomain: "utility-haze.firebaseapp.com", projectId: "utility-haze", storageBucket: "utility-haze.firebasestorage.app", messagingSenderId: "686237947418", appId: "1:686237947418:web:f03ba19ab8fff43110a3a3" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let userDataPrivate = {};
+        let myFerieData = null;
+        let listaUtentiFerie = [];
+        
+        let jsonFerie = { estive: [], invernali: [] };
+        
+        const mesiEstivi = ["Giugno", "Luglio", "Agosto", "Settembre"];
+        const mesiInvernali = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Ottobre", "Novembre", "Dicembre"];
+
+        const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
+
+        document.getElementById('searchAnno').value = new Date().getFullYear();
+        document.getElementById('regAnno').value = new Date().getFullYear();
+
+        // --- INIZIALIZZAZIONE ---
+        async function loadJSONFerie() {
+            try {
+                const res = await fetch('rotazione_ferie.json?t=' + new Date().getTime());
+                if(res.ok) {
+                    const data = await res.json();
+                    jsonFerie.estive = data.estive || [];
+                    jsonFerie.invernali = data.invernali || [];
+                }
+                popolaSelect(document.getElementById('regEstive'), jsonFerie.estive);
+                popolaSelect(document.getElementById('regInvernali'), jsonFerie.invernali);
+                popolaSelect(document.getElementById('optgroup-estive-ricerca'), jsonFerie.estive, true);
+                popolaSelect(document.getElementById('optgroup-invernali-ricerca'), jsonFerie.invernali, true);
+            } catch(e) { console.error("Errore JSON"); }
+        }
+
+        function popolaSelect(el, array, isOptgroup = false) {
+            if(!el) return;
+            el.innerHTML = isOptgroup ? '' : '<option value="">-- Seleziona --</option>';
+            array.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.n;  // Usa il parametro "n" dell'oggetto json
+                opt.innerText = item.n; 
+                el.appendChild(opt);
+            });
+        }
+
+        function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
+
+        onAuthStateChanged(auth, async (user) => {
+            nascondiTutto();
+            if (user) {
+                currentUser = user;
+                await loadJSONFerie();
+                await checkStato();
+            } else {
+                document.getElementById('view-no-auth').style.display = 'flex';
+            }
+        });
+
+        async function checkStato() {
+            try {
+                const utenteRef = doc(db, "utenti", currentUser.uid);
+                const utenteSnap = await getDoc(utenteRef);
+                if (utenteSnap.exists()) userDataPrivate = utenteSnap.data();
+
+                const ferieRef = doc(db, "ferie_condivise", currentUser.uid);
+                const ferieSnap = await getDoc(ferieRef);
+                
+                if (ferieSnap.exists()) {
+                    myFerieData = ferieSnap.data();
+                    document.getElementById('label-mia-mansione').innerText = myFerieData.mansione;
+                    document.getElementById('searchMansione').value = myFerieData.mansione;
+                    nascondiTutto();
+                    document.getElementById('view-main').style.display = 'flex';
+                    window.eseguiRicerca();
+                    caricaBacheca();
+                } else {
+                    nascondiTutto();
+                    document.getElementById('view-opt-in').style.display = 'flex';
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        // --- GESTIONE CONDIVISIONE ---
+        window.apriModaleCondivisione = function() {
+            document.getElementById('regMansione').value = userDataPrivate.mansione || "";
+            document.getElementById('shareModal').style.display = 'flex';
+        };
+
+        window.salvaFerie = async function() {
+            const anno = parseInt(document.getElementById('regAnno').value);
+            const man = document.getElementById('regMansione').value;
+            const est = document.getElementById('regEstive').value;
+            const inv = document.getElementById('regInvernali').value;
+
+            if(!anno || !man || !est || !inv) return alert("Compila tutti i campi!");
+            
+            if(!userDataPrivate.nome || !userDataPrivate.cognome || !userDataPrivate.telefono) {
+                return alert("ERRORE: Profilo incompleto. Vai in Home -> Profilo e salva Nome, Cognome e Telefono prima di condividere le ferie.");
+            }
+
+            document.getElementById('btnSalvaFerie').innerText = "Salvataggio...";
+            const payload = {
+                uid: currentUser.uid, nome: userDataPrivate.nome, cognome: userDataPrivate.cognome, telefono: userDataPrivate.telefono,
+                mansione: man, anno_base: anno, periodo_estivo: est, periodo_invernale: inv
+            };
+
+            try {
+                await setDoc(doc(db, "ferie_condivise", currentUser.uid), payload);
+                await setDoc(doc(db, "utenti", currentUser.uid), { mansione: man }, { merge: true });
+                
+                document.getElementById('shareModal').style.display = 'none';
+                checkStato();
+            } catch(e) { alert("Errore salvataggio"); document.getElementById('btnSalvaFerie').innerText = "Salva ed Entra"; }
+        };
+
+        window.revocaCondivisione = async function() {
+            if(!confirm("Vuoi nascondere le tue ferie e uscire dalla pagina?")) return;
+            await deleteDoc(doc(db, "ferie_condivise", currentUser.uid));
+            checkStato();
+        };
+
+        // --- IL MOTORE MATEMATICO ---
+        function calcolaPeriodo(periodoBase, arrayRotazione, annoBase, annoRicerca) {
+            // Cerca l'indice basandosi sulla proprietà "n" (il nome)
+            const indexCorrente = arrayRotazione.findIndex(obj => obj.n === periodoBase);
+            if (indexCorrente === -1) return "Non Trovato";
+            
+            const diffAnni = annoRicerca - annoBase;
+            const len = arrayRotazione.length;
+            
+            const nuovoIndex = (((indexCorrente + diffAnni) % len) + len) % len;
+            return arrayRotazione[nuovoIndex].n; // Ritorna il nome calcolato
+        }
+
+        // --- RICERCA E SCORRIMENTO TABS ---
+        window.switchTab = function(tabName) {
+            document.getElementById('tab-cerca').classList.remove('active');
+            document.getElementById('tab-bacheca').classList.remove('active');
+            document.getElementById('panel-cerca').style.display = 'none';
+            document.getElementById('panel-bacheca').style.display = 'none';
+            
+            document.getElementById('tab-'+tabName).classList.add('active');
+            document.getElementById('panel-'+tabName).style.display = 'block';
+        };
+
+        window.eseguiRicerca = async function() {
+            const container = document.getElementById('risultati-ricerca');
+            container.innerHTML = "<p>Calcolo rotazioni in corso...</p>";
+            
+            const annoRicerca = parseInt(document.getElementById('searchAnno').value) || new Date().getFullYear();
+            const mansioneFiltro = document.getElementById('searchMansione').value;
+            const periodoFiltro = document.getElementById('searchPeriodo').value;
+
+            try {
+                if(listaUtentiFerie.length === 0) {
+                    const snap = await getDocs(collection(db, "ferie_condivise"));
+                    listaUtentiFerie = [];
+                    snap.forEach(doc => listaUtentiFerie.push(doc.data()));
+                }
+
+                container.innerHTML = "";
+                let trovati = 0;
+
+                listaUtentiFerie.forEach(u => {
+                    if (mansioneFiltro !== "Tutte" && u.mansione !== mansioneFiltro) return;
+
+                    const estiveCalcolate = calcolaPeriodo(u.periodo_estivo, jsonFerie.estive, u.anno_base, annoRicerca);
+                    const invCalcolate = calcolaPeriodo(u.periodo_invernale, jsonFerie.invernali, u.anno_base, annoRicerca);
+
+                    if (periodoFiltro && estiveCalcolate !== periodoFiltro && invCalcolate !== periodoFiltro) return;
+
+                    trovati++;
+                    const item = document.createElement('div'); item.className = "card"; item.style.padding = "15px";
+                    const numClean = u.telefono.replace(/\s+/g, '');
+                    const isMe = u.uid === currentUser.uid ? " (Tu)" : "";
+
+                    item.innerHTML = `
+                        <div style="display:flex; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:bold; color:var(--primary); font-size: 16px;">${u.cognome} ${u.nome}${isMe}</div>
+                                <div style="font-size:12px; color:#666; margin-bottom: 8px;">${u.mansione}</div>
+                                <div><span class="badge-estivo">☀️ ${estiveCalcolate}</span></div>
+                                <div style="margin-top: 6px;"><span class="badge-invernale">❄️ ${invCalcolate}</span></div>
+                            </div>
+                            <div class="contact-actions" style="flex-direction:column; align-items:flex-end; justify-content:center;">
+                                ${!isMe ? `<a href="https://wa.me/39${numClean}" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+
+                if (trovati === 0) container.innerHTML = "<p style='color:#666;'>Nessun collega trovato per questi criteri.</p>";
+
+            } catch (e) { container.innerHTML = "<p>Errore di ricerca</p>"; console.error(e);}
+        };
+
+        // --- GESTIONE BACHECA ---
+        window.apriModaleAnnuncio = function() {
+            document.getElementById('adTipoFerie').value = 'estive';
+            aggiornaFormAnnuncio();
+            document.getElementById('adModal').style.display = 'flex';
+        };
+
+        window.aggiornaFormAnnuncio = function() {
+            const tipo = document.getElementById('adTipoFerie').value;
+            const selPeriodo = document.getElementById('adPeriodoOfferto');
+            const divMesi = document.getElementById('checkboxes-mesi');
+            
+            popolaSelect(selPeriodo, jsonFerie[tipo]);
+            divMesi.innerHTML = '';
+            
+            const listaMesi = tipo === 'estive' ? mesiEstivi : mesiInvernali;
+            listaMesi.forEach(mese => {
+                divMesi.innerHTML += `<label class="checkbox-label"><input type="checkbox" value="${mese}"> ${mese}</label>`;
+            });
+        };
+
+        window.pubblicaAnnuncio = async function() {
+            const tipo = document.getElementById('adTipoFerie').value;
+            const offro = document.getElementById('adPeriodoOfferto').value;
+            
+            const chkBox = document.querySelectorAll('#checkboxes-mesi input:checked');
+            const cercoMesi = Array.from(chkBox).map(cb => cb.value);
+
+            if(!offro || cercoMesi.length === 0) return alert("Seleziona cosa cedi e almeno un mese che cerchi.");
+
+            document.getElementById('btnSalvaAnnuncio').innerText = "Pubblicazione...";
+            
+            try {
+                await addDoc(collection(db, "bacheca_ferie"), {
+                    uid: currentUser.uid, nome: myFerieData.nome, cognome: myFerieData.cognome, 
+                    telefono: myFerieData.telefono, mansione: myFerieData.mansione, timestamp: new Date().getTime(),
+                    tipo_ferie: tipo, periodo_offerto: offro, mesi_desiderati: cercoMesi
+                });
+                document.getElementById('adModal').style.display = 'none';
+                document.getElementById('btnSalvaAnnuncio').innerText = "Pubblica Annuncio";
+                caricaBacheca();
+            } catch(e) { alert("Errore pubblicazione"); document.getElementById('btnSalvaAnnuncio').innerText = "Pubblica Annuncio"; }
+        };
+
+        async function caricaBacheca() {
+            const container = document.getElementById('lista-annunci');
+            container.innerHTML = "<p>Caricamento annunci...</p>";
+            
+            try {
+                const q = query(collection(db, "bacheca_ferie"), where("mansione", "==", myFerieData.mansione));
+                const snap = await getDocs(q);
+                
+                let annunci = [];
+                snap.forEach(doc => annunci.push({id: doc.id, ...doc.data()}));
+                annunci.sort((a,b) => b.timestamp - a.timestamp);
+
+                container.innerHTML = "";
+                if(annunci.length === 0) return container.innerHTML = "<p style='color:#666;'>Nessun annuncio per la tua mansione.</p>";
+
+                annunci.forEach(a => {
+                    const item = document.createElement('div'); item.className = "card"; item.style.borderLeft = a.tipo_ferie === 'estive' ? "4px solid #ffc107" : "4px solid #17a2b8";
+                    const numClean = a.telefono.replace(/\s+/g, '');
+                    const isMe = a.uid === currentUser.uid;
+                    const badge = a.tipo_ferie === 'estive' ? "badge-estivo" : "badge-invernale";
+
+                    item.innerHTML = `
+                        <div style="display:flex; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:bold; color:var(--text-color);">${a.cognome} ${a.nome}</div>
+                                <div style="font-size:12px; color:#666; margin-bottom: 10px;">Cede il suo turno per cercare: <b>${a.mesi_desiderati.join(', ')}</b></div>
+                                <div><span class="${badge}">CEDE: ${a.periodo_offerto}</span></div>
+                            </div>
+                            <div class="contact-actions" style="flex-direction:column; justify-content:center;">
+                                ${isMe ? `<button onclick="cancellaAnnuncio('${a.id}')" style="background:var(--danger); color:white; border:none; border-radius:4px; padding:5px; cursor:pointer;">🗑️</button>` 
+                                       : `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto il tuo annuncio in bacheca per le ferie: tu cedi ${a.periodo_offerto}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>`}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch(e) { container.innerHTML = "<p>Errore bacheca</p>"; }
+        }
+
+        window.cancellaAnnuncio = async function(id) {
+            if(!confirm("Vuoi cancellare questo annuncio?")) return;
+            await deleteDoc(doc(db, "bacheca_ferie", id));
+            caricaBacheca();
+        };
+
+    </script>
+</body>
+</html>
+
