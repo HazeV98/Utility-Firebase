@@ -203,12 +203,8 @@
         <div id="imageFlexContainer" style="display:flex; flex-direction: column; justify-content:center; align-items:center; height:100%; padding:20px; position: relative;">
             <img id="turnoImage" src="" style="max-width: 100%; max-height: 70vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain; display: none;">
             
-            <div id="ticketFallback" class="ticket-turno" style="width: 100%; max-width: 320px;">
-                <div class="ticket-code" id="tktCodice">--</div>
-                <div class="ticket-row"><b>Inizio:</b> <span id="tktInizio">--</span></div>
-                <div class="ticket-row" style="border-bottom: 2px dashed #adb5bd; margin-bottom: 10px; padding-bottom: 10px;"><b>Luogo:</b> <span id="tktLuogoInizio">--</span></div>
-                <div class="ticket-row"><b>Fine:</b> <span id="tktFine">--</span></div>
-                <div class="ticket-row" style="border: none;"><b>Luogo:</b> <span id="tktLuogoFine">--</span></div>
+            <div id="ticketFallback" class="ticket-turno" style="width: 100%; max-width: 320px; display: none;">
+                <p>Nessuna immagine disponibile.</p>
             </div>
         </div>
     </div>
@@ -229,9 +225,13 @@
         let userDataPrivate = {};
         let myAnnunciAttivi = []; 
         let stateCalendario = {}; 
+        const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
-        const svgEye = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+        const svgCamera = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>`;
+
+        // Cache per le richieste immagini per non rallentare la bacheca
+        const imgCheckCache = {};
 
         window.openSidebar = () => { document.getElementById('sidebar').style.left = '0'; document.getElementById('sidebar-overlay').style.display = 'block'; };
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
@@ -297,7 +297,6 @@
             return codiceBase; 
         }
 
-        // FORMATTAZIONE ORA CORRETTA PER INPUT TYPE="TIME"
         function formatTimeForInput(timeStr) {
             if (!timeStr) return "";
             let parts = timeStr.replace('.', ':').split(':');
@@ -366,6 +365,18 @@
             }
         }
 
+        // Funzione per verificare se l'immagine esiste fisicamente sul server
+        async function checkImageExists(url) {
+            if(imgCheckCache[url] !== undefined) return imgCheckCache[url];
+            try {
+                const res = await fetch(url, { method: 'HEAD' });
+                imgCheckCache[url] = res.ok;
+                return res.ok;
+            } catch(e) { 
+                return false; 
+            }
+        }
+
         onAuthStateChanged(auth, async (user) => {
             try {
                 nascondiTutto();
@@ -407,12 +418,17 @@
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
                 
                 const today = new Date().toISOString().split('T')[0];
-                const myAdsQ = query(collection(db, "bacheca_turni"), where("uid", "==", currentUser.uid));
-                const myAdsSnap = await getDocs(myAdsQ);
+                let qCleanup = isAdmin ? collection(db, "bacheca_turni") : query(collection(db, "bacheca_turni"), where("uid", "==", currentUser.uid));
+                const adsSnap = await getDocs(qCleanup);
                 myAnnunciAttivi = [];
-                myAdsSnap.forEach(d => {
+                
+                adsSnap.forEach(d => {
                     const a = d.data();
-                    if(a.data_scambio >= today) myAnnunciAttivi.push(a);
+                    if(a.data_scambio >= today) {
+                        if (a.uid === currentUser.uid) myAnnunciAttivi.push(a);
+                    } else {
+                        deleteDoc(doc(db, "bacheca_turni", d.id)).catch(e => {});
+                    }
                 });
 
                 window.caricaBacheca();
@@ -555,40 +571,11 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        let currentImgPathFallback = "";
-
-        window.apriImmagineTurno = function(codiceBase, chiave, dataDb, ini, fin, l_ini, l_fin) {
+        window.apriImmagineTurno = function(imagePath) {
             let imgElement = document.getElementById('turnoImage');
-            let ticketDiv = document.getElementById('ticketFallback');
-            
-            document.getElementById('tktCodice').innerText = codiceBase || "--";
-            document.getElementById('tktInizio').innerText = ini || "--";
-            document.getElementById('tktFine').innerText = fin || "--";
-            document.getElementById('tktLuogoInizio').innerText = l_ini || "--";
-            document.getElementById('tktLuogoFine').innerText = l_fin || "--";
-
-            if (chiave && dataDb) {
-                let primaryPath = `turni_${dataDb}/${chiave}.jpg`;
-                currentImgPathFallback = `turni_${dataDb}/${codiceBase}.jpg`;
-                
-                ticketDiv.style.display = 'none';
-                imgElement.style.display = 'block';
-                
-                imgElement.onerror = function() {
-                    if (currentImgPathFallback) {
-                        imgElement.src = currentImgPathFallback;
-                        currentImgPathFallback = "";
-                    } else {
-                        imgElement.style.display = 'none';
-                        ticketDiv.style.display = 'block';
-                    }
-                };
-                imgElement.src = primaryPath;
-            } else {
-                imgElement.style.display = 'none';
-                ticketDiv.style.display = 'block';
-            }
-
+            document.getElementById('ticketFallback').style.display = 'none';
+            imgElement.style.display = 'block';
+            imgElement.src = imagePath;
             document.getElementById('imageModal').style.display = 'flex';
         };
 
@@ -628,7 +615,8 @@
                 containerRes.innerHTML = "";
                 let suggeriti = 0;
 
-                annunci.forEach(a => {
+                // Modificato a ciclo for per supportare il controllo asincrono dell'immagine
+                for (const a of annunci) {
                     const isMe = a.uid === currentUser.uid;
                     
                     let isSuggested = false;
@@ -640,7 +628,6 @@
                     }
                     if (isSuggested) suggeriti++;
 
-                    // Rimosso il limite della rubrica: l'icona di whatsapp compare sempre a patto che ci sia il numero e non sia il proprio annuncio
                     const showWa = !isMe && a.telefono; 
                     const itemClass = isSuggested ? "card-suggested" : "card";
                     const numClean = (a.telefono||"").replace(/\s+/g, '');
@@ -648,12 +635,51 @@
 
                     let corpoHTML = "";
                     if (a.tipo_annuncio === 'turno') {
-                        const hasDettagli = a.codice_turno || a.ora_inizio;
+                        
+                        // Creazione Box Dettagli Turno
+                        let infoTurnoHTML = "";
+                        if (a.ora_inizio || a.luogo_inizio) {
+                            infoTurnoHTML = `
+                                <div style="font-size: 11px; color: #555; margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--primary);">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span><b>Inizio:</b> ${a.ora_inizio || '--:--'}</span>
+                                        <span><b>Fine:</b> ${a.ora_fine || '--:--'}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span><b>Da:</b> ${a.luogo_inizio || '--'}</span>
+                                        <span><b>A:</b> ${a.luogo_fine || '--'}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Verifica Esistenza Immagine Reale
+                        let btnImmagine = "";
+                        if (a.chiave_esatta && a.data_attiva_db) {
+                            let pathChiave = `turni_${a.data_attiva_db}/${a.chiave_esatta}.jpg`;
+                            let pathCodice = `turni_${a.data_attiva_db}/${a.codice_turno}.jpg`;
+                            let hasImg = false;
+                            let finalPath = "";
+                            
+                            if (await checkImageExists(pathChiave)) {
+                                hasImg = true;
+                                finalPath = pathChiave;
+                            } else if (await checkImageExists(pathCodice)) {
+                                hasImg = true;
+                                finalPath = pathCodice;
+                            }
+
+                            if (hasImg) {
+                                btnImmagine = `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${finalPath}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgCamera} Mostra Immagine Turno</button></div>`;
+                            }
+                        }
+
                         corpoHTML = `
                             <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">📅 ${dateFormatted}</div>
                             <div><span class="badge badge-${a.cerco}">CERCA: ${a.cerco.toUpperCase()}</span></div>
                             <div style="margin-top: 4px;"><span class="badge badge-${a.cedo}">CEDE: ${a.cedo.toUpperCase()} ${a.codice_turno ? '('+a.codice_turno+')' : ''}</span></div>
-                            ${hasDettagli ? `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${a.codice_turno||''}','${a.chiave_esatta||''}','${a.data_attiva_db||''}','${a.ora_inizio||''}','${a.ora_fine||''}','${a.luogo_inizio||''}','${a.luogo_fine||''}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgEye} Mostra Info Turno</button></div>` : ''}
+                            ${infoTurnoHTML}
+                            ${btnImmagine}
                         `;
                     } else {
                         let restStr = a.restituzione && a.restituzione.length > 0 ? a.restituzione.map(formattaData).join(' o ') : "Da concordare";
@@ -663,7 +689,6 @@
                         `;
                     }
 
-                    // Aggiunta visibilità esplicita del numero di telefono oltre alla matricola
                     const html = `
                         <div class="${itemClass}">
                             <div style="display:flex; justify-content: space-between;">
@@ -682,7 +707,7 @@
                     
                     if (isSuggested) containerSug.innerHTML += html;
                     else containerRes.innerHTML += html;
-                });
+                }
 
                 divSugContainer.style.display = suggeriti > 0 ? 'block' : 'none';
                 if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio in bacheca.</p>";
@@ -699,3 +724,4 @@
     </script>
 </body>
 </html>
+ 
