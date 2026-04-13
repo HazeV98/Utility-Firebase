@@ -2,9 +2,11 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Utility - Bacheca Cambi</title>
     <meta name="theme-color" content="#0056b3">
+
+    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.0/dist/panzoom.min.js"></script>
 
     <style>
         :root { --primary: #0056b3; --bg-color: #f4f7f6; --text-color: #333; --success: #28a745; --danger: #dc3545; --warning: #ffc107; --info: #17a2b8;}
@@ -197,16 +199,18 @@
         </div>
     </div>
 
-    <div id="imageModal" class="modal-overlay" onclick="chiudiImageModalSeSfondo(event)">
-        <div style="position: absolute; top: 20px; right: 20px; font-size: 35px; color: white; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10001;" onclick="chiudiImageModal()">&times;</div>
+    <div id="imageModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); overflow: hidden; backdrop-filter: blur(5px);" onclick="chiudiImageModalSeSfondo(event)">
+        <div style="position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px; font-size: 35px; color: white; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10001;" onclick="chiudiImageModal()">&times;</div>
         
-        <div id="imageFlexContainer" style="display:flex; flex-direction: column; justify-content:center; align-items:center; height:100%; padding:20px; position: relative;">
-            <img id="turnoImage" src="" style="max-width: 100%; max-height: 70vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain; display: none;">
+        <div id="imageFlexContainer" style="display:flex; flex-direction: column; justify-content:center; align-items:center; height:100%; padding:20px; padding-bottom: 80px; position: relative;">
+            <img id="turnoImage" src="" style="max-width: 100%; max-height: 70vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain;">
             
-            <div id="ticketFallback" class="ticket-turno" style="width: 100%; max-width: 320px; display: none;">
-                <p>Nessuna immagine disponibile.</p>
+            <div id="imageBanner" style="position: relative; z-index: 10001; margin-top: 15px; background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 13px; text-align: center; max-width: 90%; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                ⚠️ Controllare sempre i turni ufficiali e la presenza di eventuali varianti ai turni.
             </div>
         </div>
+        
+        <button onclick="scaricaImmagineTurno()" style="position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: #11cdef; color: white; border: none; padding: 12px 24px; border-radius: 20px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 10001;">📥 Scarica</button>
     </div>
 
     <div id="error-box" style="display: none; padding: 20px; color: red; text-align: center; width: 100%;"></div>
@@ -227,11 +231,12 @@
         let stateCalendario = {}; 
         const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
+        let currentImagePath = "";
+        let imgBaseFallback = "";
+        let pzInstance = null;
+
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
         const svgCamera = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>`;
-
-        // Cache per evitare controlli multipli sulla stessa immagine durante il caricamento
-        const imgCheckCache = {};
 
         window.openSidebar = () => { document.getElementById('sidebar').style.left = '0'; document.getElementById('sidebar-overlay').style.display = 'block'; };
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
@@ -365,17 +370,44 @@
             }
         }
 
-        // Funzione per verificare se l'immagine esiste fisicamente sul server
-        async function checkImageExists(url) {
-            if(imgCheckCache[url] !== undefined) return imgCheckCache[url];
-            try {
-                const res = await fetch(url, { method: 'HEAD' });
-                imgCheckCache[url] = res.ok;
-                return res.ok;
-            } catch(e) { 
-                return false; 
+        // --- Inizializzazione Panzoom (stile Calendario) ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const imgElem = document.getElementById('turnoImage');
+            if (typeof Panzoom !== 'undefined') {
+                pzInstance = Panzoom(imgElem, { maxScale: 5, minScale: 1 });
+                document.getElementById('imageFlexContainer').addEventListener('wheel', pzInstance.zoomWithWheel);
+                
+                function eseguiZoomToggle(e) {
+                    if (!pzInstance) return;
+                    let currentScale = pzInstance.getScale();
+                    if (currentScale < 1.1) { 
+                        pzInstance.zoom(1.75, { animate: true }); 
+                    } else { 
+                        pzInstance.reset({ animate: true }); 
+                    }
+                }
+                
+                let lastTap = 0; 
+                let isPinching = false;
+                imgElem.addEventListener('touchstart', function(e) { 
+                    if (e.touches.length > 1) { isPinching = true; } 
+                });
+                imgElem.addEventListener('touchend', function(e) {
+                    if (isPinching) { 
+                        if (e.touches.length === 0) { setTimeout(() => isPinching = false, 300); } 
+                        return; 
+                    }
+                    let currentTime = new Date().getTime(); 
+                    let tapLength = currentTime - lastTap;
+                    if (tapLength < 300 && tapLength > 0) { 
+                        eseguiZoomToggle(e); 
+                        if (e.cancelable) e.preventDefault(); 
+                    }
+                    lastTap = currentTime;
+                });
+                imgElem.addEventListener('dblclick', function(e) { eseguiZoomToggle(e); });
             }
-        }
+        });
 
         onAuthStateChanged(auth, async (user) => {
             try {
@@ -571,22 +603,60 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        window.apriImmagineTurno = function(imagePath) {
+        // --- Logica Immagine Identica a Calendario ---
+        window.apriImmagineTurno = function(codice, chiave, dataDb) {
+            if (!dataDb) {
+                alert("Dati mancanti per aprire l'immagine.");
+                return;
+            }
+            
+            if (chiave && chiave !== codice) { 
+                currentImagePath = `turni_${dataDb}/${chiave}.jpg`; 
+                imgBaseFallback = `turni_${dataDb}/${codice}.jpg`; 
+            } else { 
+                currentImagePath = `turni_${dataDb}/${codice}.jpg`; 
+                imgBaseFallback = ""; 
+            }
+            
             let imgElement = document.getElementById('turnoImage');
-            document.getElementById('ticketFallback').style.display = 'none';
-            imgElement.style.display = 'block';
-            imgElement.src = imagePath;
-            document.getElementById('imageModal').style.display = 'flex';
+            imgElement.onerror = window.erroreImmagine; 
+            imgElement.src = currentImagePath; 
+            if (pzInstance) { pzInstance.reset(); } 
+            document.getElementById('imageModal').style.display = 'block'; 
+        };
+
+        window.erroreImmagine = function() { 
+            let imgElement = document.getElementById('turnoImage'); 
+            if (imgBaseFallback) { 
+                currentImagePath = imgBaseFallback; 
+                imgElement.src = imgBaseFallback; 
+                imgBaseFallback = ""; 
+            } else { 
+                imgElement.onerror = null; 
+                alert("L'immagine del turno non è stata trovata nel database."); 
+                chiudiImageModal(); 
+            } 
         };
 
         window.chiudiImageModal = function() {
             document.getElementById('imageModal').style.display = 'none';
             document.getElementById('turnoImage').removeAttribute('src');
-        }
+            if (pzInstance) { pzInstance.reset(); }
+        };
 
         window.chiudiImageModalSeSfondo = function(event) {
             if (event.target.id === 'imageModal' || event.target.id === 'imageFlexContainer') chiudiImageModal();
-        }
+        };
+        
+        window.scaricaImmagineTurno = function() { 
+            if (!currentImagePath) return; 
+            const a = document.createElement('a'); 
+            a.href = currentImagePath; 
+            a.download = currentImagePath.split('/').pop(); 
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a); 
+        };
 
         window.caricaBacheca = async function() {
             const containerRes = document.getElementById('lista-annunci');
@@ -615,8 +685,7 @@
                 containerRes.innerHTML = "";
                 let suggeriti = 0;
 
-                // Modificato in ciclo "for...of" asincrono per poter verificare l'esistenza delle immagini riga per riga
-                for (const a of annunci) {
+                annunci.forEach(a => {
                     const isMe = a.uid === currentUser.uid;
                     
                     let isSuggested = false;
@@ -636,7 +705,6 @@
                     let corpoHTML = "";
                     if (a.tipo_annuncio === 'turno') {
                         
-                        // 1. Box Dettagli Info Turno
                         let infoTurnoHTML = "";
                         if (a.ora_inizio || a.luogo_inizio) {
                             infoTurnoHTML = `
@@ -653,41 +721,14 @@
                             `;
                         }
 
-                        // 2. Controllo reale dell'immagine basato sulla data del turno (data_scambio)
+                        // Generiamo semplicemente il pulsante: sarà il sistema onerror a gestire la mancanza!
                         let btnImmagine = "";
                         if (a.codice_turno) {
-                            let dateDash = a.data_scambio; // es. 2026-04-15
-                            let dateUnder = a.data_scambio.replace(/-/g, '_'); // es. 2026_04_15
+                            // Usiamo la data di scambio del turno per comporre la cartella (nel formato YYYY-MM-DD o simile). 
+                            // Come "fallback" di sicurezza passiamo anche quello salvato se presente.
+                            let dataDbToPass = a.data_scambio || a.data_attiva_db || "2026-03-02";
                             
-                            let pathsToCheck = [];
-                            if (a.chiave_esatta) {
-                                pathsToCheck.push(`turni_${dateDash}/${a.chiave_esatta}.jpg`);
-                                pathsToCheck.push(`turni_${dateUnder}/${a.chiave_esatta}.jpg`);
-                            }
-                            pathsToCheck.push(`turni_${dateDash}/${a.codice_turno}.jpg`);
-                            pathsToCheck.push(`turni_${dateUnder}/${a.codice_turno}.jpg`);
-                            
-                            // Fallback per vecchi salvataggi o incongruenze
-                            if (a.data_attiva_db) {
-                                if (a.chiave_esatta) pathsToCheck.push(`turni_${a.data_attiva_db}/${a.chiave_esatta}.jpg`);
-                                pathsToCheck.push(`turni_${a.data_attiva_db}/${a.codice_turno}.jpg`);
-                            }
-
-                            let hasImg = false;
-                            let finalPath = "";
-                            
-                            // Esegue richieste invisibili per capire quale immagine c'è
-                            for (let path of pathsToCheck) {
-                                if (await checkImageExists(path)) {
-                                    hasImg = true;
-                                    finalPath = path;
-                                    break;
-                                }
-                            }
-
-                            if (hasImg) {
-                                btnImmagine = `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${finalPath}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgCamera} Mostra Immagine Turno</button></div>`;
-                            }
+                            btnImmagine = `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${a.codice_turno}', '${a.chiave_esatta || ''}', '${dataDbToPass}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgCamera} Mostra Immagine Turno</button></div>`;
                         }
 
                         corpoHTML = `
@@ -723,7 +764,7 @@
                     
                     if (isSuggested) containerSug.innerHTML += html;
                     else containerRes.innerHTML += html;
-                }
+                });
 
                 divSugContainer.style.display = suggeriti > 0 ? 'block' : 'none';
                 if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio in bacheca.</p>";
