@@ -42,10 +42,6 @@
         .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px;}
         .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); cursor: pointer;}
 
-        .ticket-turno { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px dashed #adb5bd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 15px; display: none;}
-        .ticket-code { font-size: 24px; font-weight: bold; color: var(--primary); letter-spacing: 2px; margin-bottom: 10px;}
-        .ticket-row { display: flex; justify-content: space-between; font-size: 13px; color: #495057; margin-bottom: 5px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;}
-
         #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
         .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; text-transform: none; }
@@ -113,8 +109,9 @@
 
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="margin-top: 5px; color: #32325d; text-align: center; text-transform: none;">Completa il Profilo</h3>
-            <p style="font-size: 13px; color: #666; text-align: center; text-transform: none;">Per usare la bacheca servono i tuoi dati completi.</p>
+            <span id="btnCloseProfileModal" style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f; display:none;" onclick="chiudiModaleProfilo()">&times;</span>
+            <h3 style="margin-top: 5px; color: #32325d; text-align: center; text-transform: none;">I Tuoi Dati</h3>
+            <p style="font-size: 13px; color: #666; text-align: center; text-transform: none;">Questi dati verranno mostrati nei tuoi annunci.</p>
             <input type="text" id="regNome" class="input-field" placeholder="Nome" style="text-transform: capitalize;">
             <input type="text" id="regCognome" class="input-field" placeholder="Cognome" style="text-transform: capitalize;">
             <input type="text" id="regMatricola" class="input-field" placeholder="Matricola" style="text-transform: uppercase;">
@@ -128,7 +125,7 @@
                 <option value="Marinaio polivalente">Marinaio polivalente</option>
                 <option value="Direttore di macchina">Direttore di macchina</option>
             </select>
-            <button id="btnSalvaProfilo" class="btn-action" onclick="salvaProfilo()">Salva e Continua</button>
+            <button id="btnSalvaProfilo" class="btn-action" onclick="salvaProfilo()">Salva Dati</button>
         </div>
     </div>
 
@@ -196,6 +193,7 @@
             </div>
 
             <button id="btnPubblica" class="btn-action" onclick="pubblicaAnnuncio()">Pubblica Annuncio</button>
+            <button class="btn-action" style="background: #e9ecef; color: #32325d; margin-top: 10px;" onclick="apriModaleProfilo()">👤 I Miei Dati</button>
         </div>
     </div>
 
@@ -228,7 +226,6 @@
         let currentUser = null;
         let userDataPrivate = {};
         let myAnnunciAttivi = []; 
-        let stateCalendario = {}; 
         const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
         let currentImagePath = "";
@@ -242,7 +239,49 @@
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
         function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
 
-        // --- MOTORE LOGICA TURNI E LETTURA JSON (IDENTICO A CALENDARIO.HTML) ---
+        // --- MOTORE LOGICA DB COME IN CALENDARIO.HTML ---
+        const LISTA_FILE_INFO = ["info_turni_2026-03-02.json", "info_turni_2026-03-28.json"];
+        let localDbCache = {};
+        
+        async function precaricaTuttiDB() {
+            for (let file of LISTA_FILE_INFO) {
+                const match = file.match(/\d{4}-\d{2}-\d{2}/);
+                const dataInizio = match ? match[0] : null;
+                if (dataInizio) {
+                    try {
+                        const res = await fetch(file + "?v=" + new Date().getTime());
+                        if (res.ok) {
+                            localDbCache[dataInizio] = await res.json();
+                        }
+                    } catch(e) { console.warn("Impossibile caricare " + file); }
+                }
+            }
+        }
+
+        let dbInUso = null;
+        let dataAttivaDb = "";
+
+        function caricaDbCorrenteSincrono(dateStr) {
+            const dateChiavi = Object.keys(localDbCache).sort();
+            if (dateChiavi.length === 0) return null;
+            
+            const dSelezionata = stringToNum(dateStr);
+            let dataTrovata = dateChiavi[0];
+            let dbTrovato = localDbCache[dataTrovata];
+
+            for (let i = dateChiavi.length - 1; i >= 0; i--) { 
+                if (dSelezionata >= stringToNum(dateChiavi[i])) { 
+                    dataTrovata = dateChiavi[i];
+                    dbTrovato = localDbCache[dateChiavi[i]];
+                    break;
+                } 
+            }
+            
+            dbInUso = dbTrovato;
+            dataAttivaDb = dataTrovata;
+            return { db: dbTrovato, dataDb: dataTrovata };
+        }
+
         function stringToNum(s) { 
             if(!s) return 0; 
             let p = s.split('-'); 
@@ -257,76 +296,48 @@
 
         function trovaChiaveEsatta(db, codiceBase, dateStr) {
             if (!db || !codiceBase) return codiceBase;
-            
             let codiciDaCercare = [codiceBase];
             
-            // Regola 1: Linee da 1 a 9 con B (es. 1B01, 4B01)
             let matchB = codiceBase.match(/^([1-9])B(\d{2})$/);
             if (matchB) {
-                let linea = matchB[1];
-                let finale = matchB[2];
+                let linea = matchB[1]; let finale = matchB[2];
                 let letteraPilota = (linea === '1' || linea === '2') ? 'C' : 'P';
-                
                 let regex = new RegExp(`^${linea}[A-Z]${finale}$`);
                 let trovati = Object.keys(db).filter(k => regex.test(k));
-                if (trovati.length > 0) {
-                    codiciDaCercare.push(...trovati);
-                } else {
-                    codiciDaCercare.push(`${linea}${letteraPilota}${finale}`);
-                }
+                if (trovati.length > 0) codiciDaCercare.push(...trovati);
+                else codiciDaCercare.push(`${linea}${letteraPilota}${finale}`);
             } else {
-                // Regola 2: Per TUTTO IL RESTO vale la regola del +50 (es. 1251 -> 1201)
                 let match50 = codiceBase.match(/^([A-Z0-9]+?)(\d{2})$/);
                 if (match50) {
-                    let pref = match50[1];
-                    let num = parseInt(match50[2], 10);
-                    if (num >= 50) {
-                        let numPilota = String(num - 50).padStart(2, '0');
-                        codiciDaCercare.push(pref + numPilota);
-                    }
+                    let pref = match50[1]; let num = parseInt(match50[2], 10);
+                    if (num >= 50) codiciDaCercare.push(pref + String(num - 50).padStart(2, '0'));
                 }
             }
 
-            let giornoIdx = creaDataSicura(dateStr).getDay(); 
-            let targetDay = giornoIdx === 0 ? 7 : giornoIdx; 
+            let targetDay = creaDataSicura(dateStr).getDay(); 
+            targetDay = targetDay === 0 ? 7 : targetDay; 
             const dayMap = { "LUN": 1, "MAR": 2, "MER": 3, "GIO": 4, "VEN": 5, "SAB": 6, "DOM": 7 };
 
             for (let codCercato of codiciDaCercare) {
                 let keys = Object.keys(db).filter(k => k === codCercato || k.startsWith(codCercato + "_"));
-                
-                let exactMatch = null;
-                let genericMatch = null;
-
+                let exactMatch = null; let genericMatch = null;
                 for (let k of keys) {
-                    if (k === codCercato) {
-                        genericMatch = k;
-                        continue;
-                    }
-                    
+                    if (k === codCercato) { genericMatch = k; continue; }
                     let suffix = k.substring(codCercato.length + 1); 
-                    
                     if (suffix.includes("-")) {
                         let parts = suffix.split("-");
                         if (parts.length === 2 && dayMap[parts[0]] && dayMap[parts[1]]) {
-                            let start = dayMap[parts[0]];
-                            let end = dayMap[parts[1]];
-                            
-                            if (start <= end) { 
-                                if (targetDay >= start && targetDay <= end) exactMatch = k;
-                            } else { 
-                                if (targetDay >= start || targetDay <= end) exactMatch = k;
-                            }
+                            let start = dayMap[parts[0]]; let end = dayMap[parts[1]];
+                            if (start <= end) { if (targetDay >= start && targetDay <= end) exactMatch = k; } 
+                            else { if (targetDay >= start || targetDay <= end) exactMatch = k; }
                         }
                     } else {
-                        if (dayMap[suffix] && dayMap[suffix] === targetDay) {
-                            exactMatch = k;
-                        }
+                        if (dayMap[suffix] && dayMap[suffix] === targetDay) exactMatch = k;
                     }
                 }
                 if (exactMatch) return exactMatch;
                 if (genericMatch) return genericMatch;
             }
-            
             return codiceBase; 
         }
 
@@ -341,65 +352,11 @@
             return timeStr;
         }
 
-        function caricaDatiLocali() {
-            try {
-                const stored = localStorage.getItem('myTurniApp');
-                if (stored) stateCalendario = JSON.parse(stored);
-            } catch(e) {}
-        }
-
-        let dbInUso = null;
-        let dataAttivaDb = "";
-        let ultimaDataCercata = "";
-
-        async function caricaDbCorrente(dateStr) {
-            let dbTrovato = null;
-            let dataDbTrovata = "";
-
-            if (stateCalendario && stateCalendario.dbCache) {
-                const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
-                if (dateChiavi.length > 0) {
-                    const dSelezionataNum = stringToNum(dateStr);
-                    for (let i = dateChiavi.length - 1; i >= 0; i--) { 
-                        if (dSelezionataNum >= stringToNum(dateChiavi[i])) { 
-                            dbTrovato = stateCalendario.dbCache[dateChiavi[i]];
-                            dataDbTrovata = dateChiavi[i];
-                            break;
-                        } 
-                    }
-                    if(!dbTrovato) {
-                        dbTrovato = stateCalendario.dbCache[dateChiavi[0]];
-                        dataDbTrovata = dateChiavi[0];
-                    }
-                }
-            }
-
-            if (!dbTrovato) {
-                try {
-                    let res = await fetch(`info_turni_${dateStr}.json`);
-                    if (res.ok) {
-                        dbTrovato = await res.json();
-                        dataDbTrovata = dateStr;
-                    } else { throw new Error("Not found"); }
-                } catch(e) {
-                    try {
-                        let res2 = await fetch(`info_turni_2026-03-02.json`);
-                        if(res2.ok) {
-                            dbTrovato = await res2.json();
-                            dataDbTrovata = "2026-03-02";
-                        }
-                    } catch(ex) { console.error("Impossibile caricare i turni JSON"); }
-                }
-            }
-
-            if (dbTrovato) {
-                dbInUso = dbTrovato;
-                dataAttivaDb = dataDbTrovata;
-            }
-        }
-
         // --- Inizializzazione Panzoom ---
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            
+            await precaricaTuttiDB(); // Scarica i DB di base immediatamente come Calendario!
+
             const imgElem = document.getElementById('turnoImage');
             if (typeof Panzoom !== 'undefined') {
                 pzInstance = Panzoom(imgElem, { maxScale: 5, minScale: 1 });
@@ -442,7 +399,6 @@
                 nascondiTutto();
                 if (user) {
                     currentUser = user;
-                    caricaDatiLocali();
                     await checkStato();
                 } else {
                     document.getElementById('view-no-auth').style.display = 'flex';
@@ -465,13 +421,8 @@
                 document.getElementById('view-main').style.display = 'flex';
 
                 if (!ok) {
-                    document.getElementById('regNome').value = userDataPrivate.nome || "";
-                    document.getElementById('regCognome').value = userDataPrivate.cognome || "";
-                    document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
-                    document.getElementById('regTelefono').value = userDataPrivate.telefono || "";
-                    document.getElementById('regMansione').value = userDataPrivate.mansione || "";
-                    
-                    document.getElementById('profileModal').style.display = 'flex';
+                    apriModaleProfilo(); // Forza apertura
+                    document.getElementById('btnCloseProfileModal').style.display = 'none'; // Nascondi X se non è completo
                     return;
                 }
 
@@ -495,6 +446,24 @@
             } catch (error) { console.error(error); }
         }
 
+        window.apriModaleProfilo = function() {
+            document.getElementById('regNome').value = userDataPrivate.nome || "";
+            document.getElementById('regCognome').value = userDataPrivate.cognome || "";
+            document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
+            document.getElementById('regTelefono').value = userDataPrivate.telefono || "";
+            document.getElementById('regMansione').value = userDataPrivate.mansione || "";
+            
+            // Mostra la X solo se ha già i dati minimi salvati
+            const ok = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.matricola && userDataPrivate.mansione && userDataPrivate.telefono;
+            document.getElementById('btnCloseProfileModal').style.display = ok ? 'block' : 'none';
+
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        window.chiudiModaleProfilo = function() {
+            document.getElementById('profileModal').style.display = 'none';
+        }
+
         window.salvaProfilo = async function() {
             const n = document.getElementById('regNome').value.trim();
             const c = document.getElementById('regCognome').value.trim();
@@ -507,9 +476,10 @@
             document.getElementById('btnSalvaProfilo').innerText = "⏳ Salvataggio...";
             try {
                 await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, matricola: mat, telefono: tel, mansione: man }, { merge: true });
-                document.getElementById('profileModal').style.display = 'none';
+                document.getElementById('btnSalvaProfilo').innerText = "Salva Dati";
+                chiudiModaleProfilo();
                 checkStato();
-            } catch(e) { alert("Errore"); document.getElementById('btnSalvaProfilo').innerText = "Salva e Continua"; }
+            } catch(e) { alert("Errore"); document.getElementById('btnSalvaProfilo').innerText = "Salva Dati"; }
         };
 
         let adTypeSelezionato = 'turno';
@@ -527,7 +497,7 @@
             document.getElementById('adDataRestituzione1').value = ""; 
             document.getElementById('adDataRestituzione2').value = "";
 
-            await verificaTurno(); 
+            verificaTurno(); 
         };
 
         window.switchAdTab = function(type) {
@@ -545,14 +515,11 @@
             document.getElementById('adChiaveEsatta').value = ""; document.getElementById('adDataAttivaDb').value = "";
         }
 
-        window.verificaTurno = async function() {
+        window.verificaTurno = function() {
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
-            if (ultimaDataCercata !== dateStr || !dbInUso) {
-                ultimaDataCercata = dateStr;
-                await caricaDbCorrente(dateStr);
-            }
+            caricaDbCorrenteSincrono(dateStr); // Cerca sincrono nella cache
 
             const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
             
@@ -631,27 +598,24 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        // --- Logica Immagine Identica a Calendario.html ---
-        window.apriImmagineTurno = async function(codice, dataScambio) {
-            if (!codice || !dataScambio) {
+        // --- Logica Immagine Perfettamente Identica a Calendario ---
+        window.apriImmagineTurno = function(codiceTurno, dataScambio) {
+            if (!codiceTurno || !dataScambio) {
                 alert("Dati mancanti per aprire l'immagine.");
                 return;
             }
             
-            // Assicurati che il database corretto per quella data sia caricato
-            if (ultimaDataCercata !== dataScambio || !dbInUso) {
-                ultimaDataCercata = dataScambio;
-                await caricaDbCorrente(dataScambio);
-            }
+            let codicePulito = codiceTurno.toUpperCase().trim();
+            caricaDbCorrenteSincrono(dataScambio); // Inizializza dbInUso e dataAttivaDb localmente
 
-            let dataAttiva = dataAttivaDb || "2026-03-02"; // Prende la cartella esatta come "2026-03-28"
-            let chiaveTrovata = trovaChiaveEsatta(dbInUso, codice, dataScambio);
+            let dataAttiva = dataAttivaDb || "2026-03-02"; // Fallback di sicurezza 
+            let chiaveTrovata = trovaChiaveEsatta(dbInUso, codicePulito, dataScambio);
 
-            if (chiaveTrovata && chiaveTrovata !== codice && dbInUso && dbInUso[chiaveTrovata]) { 
+            if (chiaveTrovata && chiaveTrovata !== codicePulito && dbInUso && dbInUso[chiaveTrovata]) { 
                 currentImagePath = `turni_${dataAttiva}/${chiaveTrovata}.jpg`; 
-                imgBaseFallback = `turni_${dataAttiva}/${codice}.jpg`; 
+                imgBaseFallback = `turni_${dataAttiva}/${codicePulito}.jpg`; 
             } else { 
-                currentImagePath = `turni_${dataAttiva}/${codice}.jpg`; 
+                currentImagePath = `turni_${dataAttiva}/${codicePulito}.jpg`; 
                 imgBaseFallback = ""; 
             }
             
@@ -758,7 +722,6 @@
                             `;
                         }
 
-                        // Viene mostrato sempre il pulsante per i turni effettivi, ci pensa il visualizzatore a trovare la path!
                         let btnImmagine = "";
                         if (a.codice_turno) {
                             let codBase = a.codice_turno.toUpperCase();
