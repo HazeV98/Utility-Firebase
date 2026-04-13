@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility - Bacheca Cambi</title>
+    <meta name="theme-color" content="#0056b3">
+
+    <style>
+        :root { --primary: #0056b3; --bg-color: #f4f7f6; --text-color: #333; --success: #28a745; --danger: #dc3545; --warning: #ffc107; --info: #17a2b8;}
+        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2 { margin: 0; color: var(--primary); font-size: 24px; }
+        .view-container { width: 100%; max-width: 400px; display: none; flex-direction: column; gap: 15px; text-align: center; }
+        
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative; }
+        .card-suggested { background: #fffff8; border: 2px solid var(--warning); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative;}
+        .card-suggested::before { content: "✨ MATCH PERFETTO"; position: absolute; top: -10px; right: 15px; background: var(--warning); color: #fff; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
+
+        .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
+        .btn-action:active { opacity: 0.8; }
+        
+        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white;}
+        .suggested-header { font-size: 14px; font-weight: bold; color: #856404; text-align: left; margin-bottom: 10px; margin-top: 5px; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; max-height: 90vh; overflow-y: auto;}
+        
+        .tabs { display: flex; background: #e9ecef; border-radius: 10px; overflow: hidden; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; color: #666; cursor: pointer; background: transparent; border: none; transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-bottom: 4px; }
+        .badge-primo { background: #cce5ff; color: #004085; }
+        .badge-mezzo { background: #d4edda; color: #155724; }
+        .badge-terzo { background: #f8d7da; color: #721c24; }
+        .badge-riposo { background: #e2e3e5; color: #383d41; }
+
+        .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px;}
+        .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); cursor: pointer;}
+
+        /* Ticket Turno Testuale (Fallback se non c'è immagine) */
+        .ticket-turno { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px dashed #adb5bd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 15px; display: none;}
+        .ticket-code { font-size: 24px; font-weight: bold; color: var(--primary); letter-spacing: 2px; margin-bottom: 10px;}
+        .ticket-row { display: flex; justify-content: space-between; font-size: 13px; color: #495057; margin-bottom: 5px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;}
+
+        #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
+        .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h3 style="margin: 0; color: var(--primary);">Menu</h3>
+            <span style="font-size: 28px; cursor: pointer; color: #666;" onclick="closeSidebar()">&times;</span>
+        </div>
+        <a href="index.html" class="sidebar-link">🏠 Home</a>
+        <a href="calendario.html" class="sidebar-link">📅 Calendario</a>
+        <a href="rotazioni_ferie.html" class="sidebar-link">🏖️ Ferie</a>
+        <a href="rubrica.html" class="sidebar-link">📖 Rubrica Colleghi</a>
+    </div>
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="header">
+        <span style="font-size: 24px; cursor: pointer; color: var(--primary);" onclick="openSidebar()">☰</span>
+        <h2>🔄 Cambi Turno</h2>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div id="view-no-auth" class="view-container">
+        <div class="card" style="text-align: center;">
+            <h3 style="color: var(--danger);">Accesso Richiesto</h3>
+            <p style="color: #666; font-size: 15px; line-height: 1.5;">Per accedere alla bacheca scambi devi effettuare il login tramite la Home page.</p>
+            <button class="btn-action" style="background-color: var(--primary);" onclick="window.location.href='index.html'">Torna alla Home</button>
+        </div>
+    </div>
+
+    <div id="view-main" class="view-container">
+        <button class="btn-action" style="margin-top: 0; margin-bottom: 10px;" onclick="apriModaleAnnuncio()">+ Nuovo Scambio</button>
+        
+        <div class="card" style="padding: 15px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 11px; font-weight: bold; color: #666;">Filtra Mansione:</label>
+                    <select id="filtroMansione" class="input-field" style="margin-bottom: 0;" onchange="caricaBacheca()">
+                        <option value="Tutte">Tutte le mansioni</option>
+                        <option value="Marinaio">Marinaio</option>
+                        <option value="Preposto al comando">Preposto al comando</option>
+                        <option value="Comandante">Comandante</option>
+                        <option value="Timoniere">Timoniere</option>
+                        <option value="Marinaio polivalente">Marinaio polivalente</option>
+                        <option value="Direttore di macchina">Direttore di macchina</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 11px; font-weight: bold; color: #666;">Filtra Data:</label>
+                    <input type="date" id="filtroData" class="input-field" style="margin-bottom: 0;" onchange="caricaBacheca()">
+                </div>
+            </div>
+        </div>
+        
+        <div id="suggeriti-bacheca-container" style="display: none; border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+            <div class="suggested-header">✨ Suggeriti per te (Offrono ciò che cerchi)</div>
+            <div id="suggeriti-bacheca"></div>
+        </div>
+
+        <div id="lista-annunci"></div>
+    </div>
+
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Completa il Profilo</h3>
+            <p style="font-size: 13px; color: #666; text-align: center;">Per pubblicare annunci servono i tuoi dati.</p>
+            <input type="text" id="regNome" class="input-field" placeholder="Nome">
+            <input type="text" id="regCognome" class="input-field" placeholder="Cognome">
+            <input type="text" id="regMatricola" class="input-field" placeholder="Matricola">
+            <input type="tel" id="regTelefono" class="input-field" placeholder="Telefono (per WhatsApp)">
+            <select id="regMansione" class="input-field">
+                <option value="">-- Seleziona Mansione --</option>
+                <option value="Marinaio">Marinaio</option>
+                <option value="Preposto al comando">Preposto al comando</option>
+                <option value="Comandante">Comandante</option>
+                <option value="Timoniere">Timoniere</option>
+                <option value="Marinaio polivalente">Marinaio polivalente</option>
+                <option value="Direttore di macchina">Direttore di macchina</option>
+            </select>
+            <button id="btnSalvaProfilo" class="btn-action" onclick="salvaProfilo()">Salva e Continua</button>
+        </div>
+    </div>
+
+    <div id="adModal" class="modal-overlay">
+        <div class="modal-content">
+            <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('adModal').style.display='none'">&times;</span>
+            <h3 style="margin-top: 5px; color: #32325d;">Crea Annuncio</h3>
+            
+            <div class="tabs">
+                <button id="tab-ad-turno" class="tab-btn active" onclick="switchAdTab('turno')">Cambio Turno</button>
+                <button id="tab-ad-riposo" class="tab-btn" onclick="switchAdTab('riposo')">Cambio Riposo</button>
+            </div>
+
+            <div id="form-ad-turno">
+                <label style="font-size: 11px; font-weight: bold; color: #666;">Data del cambio:</label>
+                <input type="date" id="adDataTurno" class="input-field" onchange="verificaTurno()">
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: bold; color: #666;">Cerco:</label>
+                        <select id="adCercoTurno" class="input-field">
+                            <option value="primo">Primo</option>
+                            <option value="mezzo">Mezzo</option>
+                            <option value="terzo">Terzo</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: bold; color: #666;">Cedo:</label>
+                        <select id="adCedoTurno" class="input-field">
+                            <option value="primo">Primo</option>
+                            <option value="mezzo">Mezzo</option>
+                            <option value="terzo">Terzo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
+                <label style="font-size: 11px; font-weight: bold; color: var(--primary);">Dettagli Turno Ceduto (Facoltativo):</label>
+                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Codice Turno (es. 1A, 4251...)" oninput="verificaTurno()">
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="time" id="adOraInizio" class="input-field" placeholder="Ora Inizio" style="flex:1;">
+                    <input type="text" id="adLuogoInizio" class="input-field" placeholder="Luogo Inizio" style="flex:2;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="time" id="adOraFine" class="input-field" placeholder="Ora Fine" style="flex:1;">
+                    <input type="text" id="adLuogoFine" class="input-field" placeholder="Luogo Fine" style="flex:2;">
+                </div>
+                
+                <input type="hidden" id="adChiaveEsatta">
+                <input type="hidden" id="adDataAttivaDb">
+            </div>
+
+            <div id="form-ad-riposo" style="display: none;">
+                <label style="font-size: 11px; font-weight: bold; color: #666;">Cerco Riposo il giorno:</label>
+                <input type="date" id="adDataRiposo" class="input-field">
+                <label style="font-size: 11px; font-weight: bold; color: #666;">Giorni in cui posso restituirlo (Facoltativo):</label>
+                <input type="date" id="adDataRestituzione1" class="input-field" style="margin-bottom: 5px;">
+                <input type="date" id="adDataRestituzione2" class="input-field">
+                <p style="font-size: 10px; color: #999; margin-top: 0;">Puoi lasciare vuoto se vuoi concordarlo in chat.</p>
+            </div>
+
+            <button id="btnPubblica" class="btn-action" onclick="pubblicaAnnuncio()">Pubblica Annuncio</button>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal-overlay" onclick="chiudiImageModalSeSfondo(event)">
+        <div style="position: absolute; top: 20px; right: 20px; font-size: 35px; color: white; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10001;" onclick="chiudiImageModal()">&times;</div>
+        
+        <div id="imageFlexContainer" style="display:flex; flex-direction: column; justify-content:center; align-items:center; height:100%; padding:20px; position: relative;">
+            <img id="turnoImage" src="" style="max-width: 100%; max-height: 70vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain; display: none;">
+            
+            <div id="ticketFallback" class="ticket-turno" style="width: 100%; max-width: 320px;">
+                <div class="ticket-code" id="tktCodice">--</div>
+                <div class="ticket-row"><b>Inizio:</b> <span id="tktInizio">--</span></div>
+                <div class="ticket-row" style="border-bottom: 2px dashed #adb5bd; margin-bottom: 10px; padding-bottom: 10px;"><b>Luogo:</b> <span id="tktLuogoInizio">--</span></div>
+                <div class="ticket-row"><b>Fine:</b> <span id="tktFine">--</span></div>
+                <div class="ticket-row" style="border: none;"><b>Luogo:</b> <span id="tktLuogoFine">--</span></div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4", authDomain: "utility-haze.firebaseapp.com", projectId: "utility-haze", storageBucket: "utility-haze.firebasestorage.app", messagingSenderId: "686237947418", appId: "1:686237947418:web:f03ba19ab8fff43110a3a3" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let userDataPrivate = {};
+        let myAnnunciAttivi = []; 
+        let rubricaCondivisaSet = new Set();
+        let stateCalendario = {}; // La cache completa del calendario locale
+
+        const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
+        const svgEye = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+
+        window.openSidebar = () => { document.getElementById('sidebar').style.left = '0'; document.getElementById('sidebar-overlay').style.display = 'block'; };
+        window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
+        function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
+
+        // --- MOTORE LOGICA TURNI (Come da Calendario) ---
+        function stringToNum(s) { 
+            if(!s) return 0; 
+            let p = s.split('-'); 
+            return Math.floor(Date.UTC(p[0], p[1]-1, p[2]) / 86400000); 
+        }
+
+        function creaDataSicura(dataStr) { 
+            if(!dataStr) return new Date(); 
+            let p = dataStr.split('-'); 
+            return new Date(p[0], p[1] - 1, p[2], 12, 0, 0); 
+        }
+
+        function trovaChiaveEsatta(db, codiceBase, dateStr) {
+            if (!db || !codiceBase) return codiceBase;
+            let codiciDaCercare = [codiceBase];
+            
+            let matchB = codiceBase.match(/^([1-9])B(\d{2})$/);
+            if (matchB) {
+                let linea = matchB[1]; let finale = matchB[2];
+                let letteraPilota = (linea === '1' || linea === '2') ? 'C' : 'P';
+                let regex = new RegExp(`^${linea}[A-Z]${finale}$`);
+                let trovati = Object.keys(db).filter(k => regex.test(k));
+                if (trovati.length > 0) codiciDaCercare.push(...trovati);
+                else codiciDaCercare.push(`${linea}${letteraPilota}${finale}`);
+            } else {
+                let match50 = codiceBase.match(/^([A-Z0-9]+?)(\d{2})$/);
+                if (match50) {
+                    let pref = match50[1]; let num = parseInt(match50[2], 10);
+                    if (num >= 50) codiciDaCercare.push(pref + String(num - 50).padStart(2, '0'));
+                }
+            }
+
+            let targetDay = creaDataSicura(dateStr).getDay(); 
+            targetDay = targetDay === 0 ? 7 : targetDay; 
+            const dayMap = { "LUN": 1, "MAR": 2, "MER": 3, "GIO": 4, "VEN": 5, "SAB": 6, "DOM": 7 };
+
+            for (let codCercato of codiciDaCercare) {
+                let keys = Object.keys(db).filter(k => k === codCercato || k.startsWith(codCercato + "_"));
+                let exactMatch = null; let genericMatch = null;
+                for (let k of keys) {
+                    if (k === codCercato) { genericMatch = k; continue; }
+                    let suffix = k.substring(codCercato.length + 1); 
+                    if (suffix.includes("-")) {
+                        let parts = suffix.split("-");
+                        if (parts.length === 2 && dayMap[parts[0]] && dayMap[parts[1]]) {
+                            let start = dayMap[parts[0]]; let end = dayMap[parts[1]];
+                            if (start <= end) { if (targetDay >= start && targetDay <= end) exactMatch = k; } 
+                            else { if (targetDay >= start || targetDay <= end) exactMatch = k; }
+                        }
+                    } else {
+                        if (dayMap[suffix] && dayMap[suffix] === targetDay) exactMatch = k;
+                    }
+                }
+                if (exactMatch) return exactMatch;
+                if (genericMatch) return genericMatch;
+            }
+            return codiceBase; 
+        }
+
+        function caricaDatiLocali() {
+            try {
+                const stored = localStorage.getItem('myTurniApp');
+                if (stored) stateCalendario = JSON.parse(stored);
+            } catch(e) {}
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            nascondiTutto();
+            if (user) {
+                currentUser = user;
+                caricaDatiLocali();
+                await checkStato();
+            } else {
+                document.getElementById('view-no-auth').style.display = 'flex';
+            }
+        });
+
+        async function fetchRubrica() {
+            try {
+                const snap = await getDocs(collection(db, "rubrica"));
+                rubricaCondivisaSet.clear();
+                snap.forEach(doc => rubricaCondivisaSet.add(doc.id));
+            } catch(e) {}
+        }
+
+        async function checkStato() {
+            try {
+                const utenteRef = doc(db, "utenti", currentUser.uid);
+                const utenteSnap = await getDoc(utenteRef);
+                if (utenteSnap.exists()) userDataPrivate = utenteSnap.data();
+
+                const ok = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.matricola && userDataPrivate.mansione && userDataPrivate.telefono;
+                if (!ok) {
+                    document.getElementById('profileModal').style.display = 'flex';
+                    return; 
+                }
+
+                document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
+                await fetchRubrica();
+                
+                const today = new Date().toISOString().split('T')[0];
+                const myAdsQ = query(collection(db, "bacheca_turni"), where("uid", "==", currentUser.uid));
+                const myAdsSnap = await getDocs(myAdsQ);
+                myAnnunciAttivi = [];
+                myAdsSnap.forEach(d => {
+                    const a = d.data();
+                    if(a.data_scambio >= today) myAnnunciAttivi.push(a);
+                });
+
+                nascondiTutto();
+                document.getElementById('view-main').style.display = 'flex';
+                window.caricaBacheca();
+            } catch (error) { console.error(error); }
+        }
+
+        window.salvaProfilo = async function() {
+            const n = document.getElementById('regNome').value.trim();
+            const c = document.getElementById('regCognome').value.trim();
+            const mat = document.getElementById('regMatricola').value.trim();
+            const tel = document.getElementById('regTelefono').value.trim();
+            const man = document.getElementById('regMansione').value;
+
+            if(!n || !c || !mat || !tel || !man) return alert("Compila tutti i campi.");
+            
+            document.getElementById('btnSalvaProfilo').innerText = "Salvataggio...";
+            try {
+                await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, matricola: mat, telefono: tel, mansione: man }, { merge: true });
+                document.getElementById('profileModal').style.display = 'none';
+                checkStato();
+            } catch(e) { alert("Errore"); }
+        };
+
+        // --- GESTIONE MODALE ANNUNCI ---
+        let adTypeSelezionato = 'turno';
+        
+        window.apriModaleAnnuncio = function() {
+            document.getElementById('adModal').style.display = 'flex';
+            switchAdTab('turno');
+            document.getElementById('adDataTurno').value = "";
+            document.getElementById('adCodiceTurno').value = "";
+            document.getElementById('adOraInizio').value = ""; document.getElementById('adOraFine').value = "";
+            document.getElementById('adLuogoInizio').value = ""; document.getElementById('adLuogoFine').value = "";
+            document.getElementById('adDataRiposo').value = "";
+            document.getElementById('adDataRestituzione1').value = ""; document.getElementById('adDataRestituzione2').value = "";
+            document.getElementById('adChiaveEsatta').value = ""; document.getElementById('adDataAttivaDb').value = "";
+        };
+
+        window.switchAdTab = function(type) {
+            adTypeSelezionato = type;
+            document.getElementById('tab-ad-turno').classList.remove('active');
+            document.getElementById('tab-ad-riposo').classList.remove('active');
+            document.getElementById('tab-ad-'+type).classList.add('active');
+            document.getElementById('form-ad-turno').style.display = type === 'turno' ? 'block' : 'none';
+            document.getElementById('form-ad-riposo').style.display = type === 'riposo' ? 'block' : 'none';
+        };
+
+        // IL CUORE DELLA LETTURA TURNI (Da calendario)
+        window.verificaTurno = function() {
+            let dateStr = document.getElementById('adDataTurno').value;
+            if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
+            
+            const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+            if (!codiceBase || !stateCalendario.dbCache) return;
+            
+            // Trova db attivo per la data
+            const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
+            let dbCorrente = {};
+            let dataAttiva = dateChiavi[0] || "2026-03-02";
+            const dSelezionataNum = stringToNum(dateStr);
+            
+            for (let i = dateChiavi.length - 1; i >= 0; i--) { 
+                if (dSelezionataNum >= stringToNum(dateChiavi[i])) { 
+                    dbCorrente = stateCalendario.dbCache[dateChiavi[i]]; 
+                    dataAttiva = dateChiavi[i]; 
+                    break; 
+                } 
+            }
+            
+            // Risolve la chiave esatta (+50, lettere B/C/P ecc.)
+            let chiaveTrovata = trovaChiaveEsatta(dbCorrente, codiceBase, dateStr); 
+            let dettagli = dbCorrente[chiaveTrovata];
+
+            if (dettagli) {
+                if(dettagli.inizio) document.getElementById('adOraInizio').value = dettagli.inizio;
+                if(dettagli.fine) document.getElementById('adOraFine').value = dettagli.fine;
+                if(dettagli.luogoInizio) document.getElementById('adLuogoInizio').value = dettagli.luogoInizio;
+                if(dettagli.luogoFine) document.getElementById('adLuogoFine').value = dettagli.luogoFine;
+                
+                // Salva le chiavi segrete per l'immagine
+                document.getElementById('adChiaveEsatta').value = chiaveTrovata;
+                document.getElementById('adDataAttivaDb').value = dataAttiva;
+            }
+        };
+
+        window.pubblicaAnnuncio = async function() {
+            const btn = document.getElementById('btnPubblica');
+            let payload = {
+                uid: currentUser.uid,
+                nome: userDataPrivate.nome, cognome: userDataPrivate.cognome, 
+                mansione: userDataPrivate.mansione, matricola: userDataPrivate.matricola, telefono: userDataPrivate.telefono,
+                timestamp: new Date().getTime(), tipo_annuncio: adTypeSelezionato
+            };
+
+            if (adTypeSelezionato === 'turno') {
+                const dataT = document.getElementById('adDataTurno').value;
+                if(!dataT) return alert("Inserisci la data del turno.");
+                payload.data_scambio = dataT;
+                payload.cerco = document.getElementById('adCercoTurno').value;
+                payload.cedo = document.getElementById('adCedoTurno').value;
+                payload.codice_turno = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+                payload.ora_inizio = document.getElementById('adOraInizio').value;
+                payload.ora_fine = document.getElementById('adOraFine').value;
+                payload.luogo_inizio = document.getElementById('adLuogoInizio').value;
+                payload.luogo_fine = document.getElementById('adLuogoFine').value;
+                
+                // Dati Immagine
+                payload.chiave_esatta = document.getElementById('adChiaveEsatta').value;
+                payload.data_attiva_db = document.getElementById('adDataAttivaDb').value;
+            } else {
+                const dataR = document.getElementById('adDataRiposo').value;
+                if(!dataR) return alert("Inserisci la data.");
+                payload.data_scambio = dataR; payload.cerco = 'riposo'; payload.cedo = 'riposo';
+                let res = [];
+                const d1 = document.getElementById('adDataRestituzione1').value;
+                const d2 = document.getElementById('adDataRestituzione2').value;
+                if(d1) res.push(d1); if(d2) res.push(d2);
+                payload.restituzione = res;
+            }
+
+            btn.innerText = "Pubblicazione...";
+            try {
+                await addDoc(collection(db, "bacheca_turni"), payload);
+                document.getElementById('adModal').style.display = 'none';
+                btn.innerText = "Pubblica Annuncio";
+                checkStato();
+            } catch(e) { alert("Errore"); btn.innerText = "Pubblica Annuncio"; }
+        };
+
+        function formattaData(isoStr) {
+            if(!isoStr) return "";
+            const d = new Date(isoStr);
+            return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        // --- SISTEMA IMMAGINI / FALLBACK ---
+        let currentImgPathFallback = "";
+
+        window.apriImmagineTurno = function(codiceBase, chiave, dataDb, ini, fin, l_ini, l_fin) {
+            let imgElement = document.getElementById('turnoImage');
+            let ticketDiv = document.getElementById('ticketFallback');
+            
+            // Popola il biglietto di riserva
+            document.getElementById('tktCodice').innerText = codiceBase || "--";
+            document.getElementById('tktInizio').innerText = ini || "--";
+            document.getElementById('tktFine').innerText = fin || "--";
+            document.getElementById('tktLuogoInizio').innerText = l_ini || "--";
+            document.getElementById('tktLuogoFine').innerText = l_fin || "--";
+
+            if (chiave && dataDb) {
+                // Tenta di caricare l'immagine vera risolta dal DB!
+                let primaryPath = `turni_${dataDb}/${chiave}.jpg`;
+                currentImgPathFallback = `turni_${dataDb}/${codiceBase}.jpg`;
+                
+                ticketDiv.style.display = 'none';
+                imgElement.style.display = 'block';
+                
+                imgElement.onerror = function() {
+                    if (currentImgPathFallback) {
+                        imgElement.src = currentImgPathFallback;
+                        currentImgPathFallback = "";
+                    } else {
+                        // Se fallisce anche il fallback, mostra il ticket testuale
+                        imgElement.style.display = 'none';
+                        ticketDiv.style.display = 'block';
+                    }
+                };
+                imgElement.src = primaryPath;
+            } else {
+                // Non abbiamo i dati per costruire il path
+                imgElement.style.display = 'none';
+                ticketDiv.style.display = 'block';
+            }
+
+            document.getElementById('imageModal').style.display = 'flex';
+        };
+
+        window.chiudiImageModal = function() {
+            document.getElementById('imageModal').style.display = 'none';
+            document.getElementById('turnoImage').removeAttribute('src');
+        }
+
+        window.chiudiImageModalSeSfondo = function(event) {
+            if (event.target.id === 'imageModal' || event.target.id === 'imageFlexContainer') chiudiImageModal();
+        }
+
+        window.caricaBacheca = async function() {
+            const containerRes = document.getElementById('lista-annunci');
+            const containerSug = document.getElementById('suggeriti-bacheca');
+            const divSugContainer = document.getElementById('suggeriti-bacheca-container');
+            
+            const fMan = document.getElementById('filtroMansione').value;
+            const fData = document.getElementById('filtroData').value;
+            const today = new Date().toISOString().split('T')[0];
+            const isMeSharedInRubrica = rubricaCondivisaSet.has(currentUser.uid);
+
+            containerRes.innerHTML = "<p>Caricamento...</p>";
+            containerSug.innerHTML = "";
+
+            try {
+                let q = fMan === "Tutte" ? query(collection(db, "bacheca_turni")) : query(collection(db, "bacheca_turni"), where("mansione", "==", fMan));
+                const snap = await getDocs(q);
+                let annunci = [];
+                snap.forEach(doc => {
+                    const a = doc.data(); a.id = doc.id;
+                    if(a.data_scambio >= today) annunci.push(a);
+                });
+
+                if(fData) annunci = annunci.filter(a => a.data_scambio === fData);
+                annunci.sort((a,b) => a.data_scambio.localeCompare(b.data_scambio));
+
+                containerRes.innerHTML = "";
+                let suggeriti = 0;
+
+                annunci.forEach(a => {
+                    const isMe = a.uid === currentUser.uid;
+                    const isPosterSharedInRubrica = rubricaCondivisaSet.has(a.uid);
+                    
+                    let isSuggested = false;
+                    if (!isMe) {
+                        isSuggested = myAnnunciAttivi.some(mio => {
+                            if(mio.data_scambio === a.data_scambio) {
+                                if(mio.cerco === a.cedo) return true;
+                            }
+                            return false;
+                        });
+                    }
+                    if (isSuggested) suggeriti++;
+
+                    const showWa = !isMe && isMeSharedInRubrica && isPosterSharedInRubrica;
+                    const itemClass = isSuggested ? "card-suggested" : "card";
+                    const numClean = (a.telefono||"").replace(/\s+/g, '');
+                    const dateFormatted = formattaData(a.data_scambio);
+
+                    let corpoHTML = "";
+                    if (a.tipo_annuncio === 'turno') {
+                        const hasDettagli = a.codice_turno || a.ora_inizio;
+                        corpoHTML = `
+                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">📅 ${dateFormatted}</div>
+                            <div><span class="badge badge-${a.cerco}">CERCA: ${a.cerco.toUpperCase()}</span></div>
+                            <div style="margin-top: 4px;"><span class="badge badge-${a.cedo}">CEDE: ${a.cedo.toUpperCase()} ${a.codice_turno ? '('+a.codice_turno+')' : ''}</span></div>
+                            ${hasDettagli ? `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${a.codice_turno||''}','${a.chiave_esatta||''}','${a.data_attiva_db||''}','${a.ora_inizio||''}','${a.ora_fine||''}','${a.luogo_inizio||''}','${a.luogo_fine||''}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgEye} Mostra Info Turno</button></div>` : ''}
+                        `;
+                    } else {
+                        let restStr = a.restituzione && a.restituzione.length > 0 ? a.restituzione.map(formattaData).join(' o ') : "Da concordare";
+                        corpoHTML = `
+                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">📅 CERCA RIPOSO IL: ${dateFormatted}</div>
+                            <div style="margin-top: 4px;"><span class="badge badge-riposo">RESTITUISCE: ${restStr}</span></div>
+                        `;
+                    }
+
+                    const html = `
+                        <div class="${itemClass}">
+                            <div style="display:flex; justify-content: space-between;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight:bold; color:var(--text-color); margin-bottom: 2px;">${a.cognome} ${a.nome}</div>
+                                    <div style="font-size:11px; color:#666; margin-bottom: 8px;">${a.mansione} | Mat: ${a.matricola}</div>
+                                    ${corpoHTML}
+                                </div>
+                                <div class="contact-actions" style="flex-direction:column; justify-content:center; padding-left: 10px;">
+                                    ${isMe ? `<button onclick="cancellaAnnuncio('${a.id}')" class="action-icon" style="background:var(--danger); color:white; border:none; padding:8px; width:auto; height:auto;">🗑️</button>` 
+                                           : (showWa ? `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto in bacheca il tuo annuncio per il ${dateFormatted}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent;">${svgWa}</a>` : '')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (isSuggested) containerSug.innerHTML += html;
+                    else containerRes.innerHTML += html;
+                });
+
+                divSugContainer.style.display = suggeriti > 0 ? 'block' : 'none';
+                if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio in bacheca.</p>";
+
+            } catch(e) { containerRes.innerHTML = "<p>Errore bacheca</p>"; }
+        }
+
+        window.cancellaAnnuncio = async function(id) {
+            if(!confirm("Vuoi cancellare questo annuncio?")) return;
+            await deleteDoc(doc(db, "bacheca_turni", id));
+            checkStato();
+        };
+
+    </script>
+</body>
+</html>
+ 
