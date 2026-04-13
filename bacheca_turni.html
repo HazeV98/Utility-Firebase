@@ -107,7 +107,7 @@
         <div id="lista-annunci"></div>
     </div>
 
-    <div id="profileModal" class="modal-overlay">
+    <div id="profileModal" class="modal-overlay" onclick="chiudiSeSfondo(event, 'profileModal')" style="z-index: 5010;">
         <div class="modal-content">
             <span id="btnCloseProfileModal" style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f; display:none;" onclick="chiudiModaleProfilo()">&times;</span>
             <h3 style="margin-top: 5px; color: #32325d; text-align: center; text-transform: none;">I Tuoi Dati</h3>
@@ -129,7 +129,7 @@
         </div>
     </div>
 
-    <div id="adModal" class="modal-overlay">
+    <div id="adModal" class="modal-overlay" onclick="chiudiSeSfondo(event, 'adModal')">
         <div class="modal-content">
             <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('adModal').style.display='none'">&times;</span>
             <h3 style="margin-top: 5px; color: #32325d; text-transform: none;">Crea Annuncio</h3>
@@ -238,6 +238,13 @@
         window.openSidebar = () => { document.getElementById('sidebar').style.left = '0'; document.getElementById('sidebar-overlay').style.display = 'block'; };
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
         function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
+
+        // --- FUNZIONE PER CHIUDERE MODALI CLICCANDO FUORI ---
+        window.chiudiSeSfondo = function(event, modalId) {
+            if (event.target.id === modalId) {
+                document.getElementById(modalId).style.display = 'none';
+            }
+        };
 
         // --- MOTORE LOGICA DB COME IN CALENDARIO.HTML ---
         const LISTA_FILE_INFO = ["info_turni_2026-03-02.json", "info_turni_2026-03-28.json"];
@@ -447,6 +454,8 @@
         }
 
         window.apriModaleProfilo = function() {
+            // Rimossa la chiusura del modale adModal: ora si apre in sovraimpressione!
+            
             document.getElementById('regNome').value = userDataPrivate.nome || "";
             document.getElementById('regCognome').value = userDataPrivate.cognome || "";
             document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
