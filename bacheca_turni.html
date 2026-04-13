@@ -22,7 +22,7 @@
         
         .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white; text-transform: uppercase;}
         .input-field::placeholder { text-transform: none; }
-        .suggested-header { font-size: 14px; font-weight: bold; color: #856404; text-align: left; margin-bottom: 10px; margin-top: 5px; }
+        .suggested-header { font-size: 14px; font-weight: bold; color: #856404; text-align: left; margin-bottom: 10px; margin-top: 5px; text-transform: none;}
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; max-height: 90vh; overflow-y: auto;}
@@ -40,12 +40,10 @@
         .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px;}
         .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); cursor: pointer;}
 
-        /* Ticket Turno (Fallback se non c'è immagine) */
         .ticket-turno { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px dashed #adb5bd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 15px; display: none;}
         .ticket-code { font-size: 24px; font-weight: bold; color: var(--primary); letter-spacing: 2px; margin-bottom: 10px;}
         .ticket-row { display: flex; justify-content: space-between; font-size: 13px; color: #495057; margin-bottom: 5px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;}
 
-        /* Sidebar */
         #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
         .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; text-transform: none; }
@@ -104,7 +102,7 @@
         </div>
         
         <div id="suggeriti-bacheca-container" style="display: none; border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 15px;">
-            <div class="suggested-header" style="text-transform: none;">✨ Suggeriti per te (Offrono ciò che cerchi)</div>
+            <div class="suggested-header">✨ Suggeriti per te (Offrono ciò che cerchi)</div>
             <div id="suggeriti-bacheca"></div>
         </div>
 
@@ -117,7 +115,7 @@
             <p style="font-size: 13px; color: #666; text-align: center; text-transform: none;">Per usare la bacheca servono i tuoi dati completi.</p>
             <input type="text" id="regNome" class="input-field" placeholder="Nome" style="text-transform: capitalize;">
             <input type="text" id="regCognome" class="input-field" placeholder="Cognome" style="text-transform: capitalize;">
-            <input type="text" id="regMatricola" class="input-field" placeholder="Matricola">
+            <input type="text" id="regMatricola" class="input-field" placeholder="Matricola" style="text-transform: uppercase;">
             <input type="tel" id="regTelefono" class="input-field" placeholder="Telefono (per WhatsApp)" style="text-transform: none;">
             <select id="regMansione" class="input-field" style="text-transform: none;">
                 <option value="">-- Seleziona Mansione --</option>
@@ -148,16 +146,16 @@
                 
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
-                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cerco:</label>
-                        <select id="adCercoTurno" class="input-field" style="text-transform: none;">
+                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cedo:</label>
+                        <select id="adCedoTurno" class="input-field" style="text-transform: none;">
                             <option value="primo">Primo</option>
                             <option value="mezzo">Mezzo</option>
                             <option value="terzo">Terzo</option>
                         </select>
                     </div>
                     <div style="flex: 1;">
-                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cedo:</label>
-                        <select id="adCedoTurno" class="input-field" style="text-transform: none;">
+                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cerco:</label>
+                        <select id="adCercoTurno" class="input-field" style="text-transform: none;">
                             <option value="primo">Primo</option>
                             <option value="mezzo">Mezzo</option>
                             <option value="terzo">Terzo</option>
@@ -230,7 +228,7 @@
         let userDataPrivate = {};
         let myAnnunciAttivi = []; 
         let rubricaCondivisaSet = new Set();
-        let stateCalendario = {}; // La cache completa del calendario locale salvata nel localStorage
+        let stateCalendario = {}; 
 
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
         const svgEye = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
@@ -299,6 +297,18 @@
             return codiceBase; 
         }
 
+        // Funzione per formattare orari ad un tempo accettato dai campi <input type="time"> (es. 6:00 -> 06:00)
+        function formatTimeForInput(timeStr) {
+            if (!timeStr) return "";
+            let parts = timeStr.replace('.', ':').split(':');
+            if (parts.length >= 2) {
+                let h = parts[0].trim().padStart(2, '0');
+                let m = parts[1].trim().padStart(2, '0');
+                return `${h}:${m}`;
+            }
+            return timeStr;
+        }
+
         function caricaDatiLocali() {
             try {
                 const stored = localStorage.getItem('myTurniApp');
@@ -306,7 +316,6 @@
             } catch(e) {}
         }
 
-        // Variabili globali per la gestione della Cache DB JSON
         let dbInUso = null;
         let dataAttivaDb = "";
         let ultimaDataCercata = "";
@@ -315,7 +324,6 @@
             let dbTrovato = null;
             let dataDbTrovata = "";
 
-            // 1. Cerca nella cache locale di calendario.html
             if (stateCalendario && stateCalendario.dbCache) {
                 const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
                 if (dateChiavi.length > 0) {
@@ -327,14 +335,13 @@
                             break;
                         } 
                     }
-                    if(!dbTrovato) { // Fallback al primo disponibile
+                    if(!dbTrovato) {
                         dbTrovato = stateCalendario.dbCache[dateChiavi[0]];
                         dataDbTrovata = dateChiavi[0];
                     }
                 }
             }
 
-            // 2. Se non lo trovi in cache, prova a scaricare direttamente il JSON!
             if (!dbTrovato) {
                 try {
                     let res = await fetch(`info_turni_${dateStr}.json`);
@@ -343,7 +350,6 @@
                         dataDbTrovata = dateStr;
                     } else { throw new Error("Not found"); }
                 } catch(e) {
-                    // Fallback al database stabile se l'utente non ha aperto prima il calendario
                     try {
                         let res2 = await fetch(`info_turni_2026-03-02.json`);
                         if(res2.ok) {
@@ -354,15 +360,15 @@
                 }
             }
 
-            // Se l'ha trovato (in locale o via internet), genera l'autocompletamento (Datalist)
             if (dbTrovato) {
                 dbInUso = dbTrovato;
                 dataAttivaDb = dataDbTrovata;
                 
+                // Popoliamo subito i suggerimenti appena la finestra o la data cambia
                 const dl = document.getElementById('turni-suggeriti');
                 dl.innerHTML = "";
                 let basi = new Set();
-                Object.keys(dbTrovato).forEach(k => basi.add(k.split('_')[0])); // Rimuovi _LUN per suggerire il turno pulito
+                Object.keys(dbTrovato).forEach(k => basi.add(k.split('_')[0])); 
                 
                 Array.from(basi).sort().forEach(cod => {
                     let opt = document.createElement('option');
@@ -404,12 +410,10 @@
 
                 const ok = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.matricola && userDataPrivate.mansione && userDataPrivate.telefono;
                 
-                // MOSTRA SEMPRE IL MAIN PER EVITARE SCHERMATE BIANCHE
                 nascondiTutto();
                 document.getElementById('view-main').style.display = 'flex';
 
                 if (!ok) {
-                    // Precompila col salvato finora se c'è
                     document.getElementById('regNome').value = userDataPrivate.nome || "";
                     document.getElementById('regCognome').value = userDataPrivate.cognome || "";
                     document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
@@ -417,7 +421,7 @@
                     document.getElementById('regMansione').value = userDataPrivate.mansione || "";
                     
                     document.getElementById('profileModal').style.display = 'flex';
-                    return; // Ferma il caricamento della bacheca finché non salva
+                    return;
                 }
 
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
@@ -453,19 +457,24 @@
             } catch(e) { alert("Errore"); document.getElementById('btnSalvaProfilo').innerText = "Salva e Continua"; }
         };
 
-        // --- GESTIONE MODALE ANNUNCI ---
         let adTypeSelezionato = 'turno';
         
-        window.apriModaleAnnuncio = function() {
+        window.apriModaleAnnuncio = async function() {
             document.getElementById('adModal').style.display = 'flex';
             switchAdTab('turno');
-            document.getElementById('adDataTurno').value = "";
+            
+            // Imposta subito la data di oggi per precaricare i suggerimenti
+            let todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('adDataTurno').value = todayStr;
+            
+            svuotaCampiTurno();
             document.getElementById('adCodiceTurno').value = "";
-            document.getElementById('adOraInizio').value = ""; document.getElementById('adOraFine').value = "";
-            document.getElementById('adLuogoInizio').value = ""; document.getElementById('adLuogoFine').value = "";
             document.getElementById('adDataRiposo').value = "";
-            document.getElementById('adDataRestituzione1').value = ""; document.getElementById('adDataRestituzione2').value = "";
-            document.getElementById('adChiaveEsatta').value = ""; document.getElementById('adDataAttivaDb').value = "";
+            document.getElementById('adDataRestituzione1').value = ""; 
+            document.getElementById('adDataRestituzione2').value = "";
+
+            // Forza il caricamento del database JSON prima che l'utente scriva
+            await verificaTurno(); 
         };
 
         window.switchAdTab = function(type) {
@@ -487,7 +496,7 @@
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
-            // Se la data cambia, scarica il JSON della nuova data per i suggerimenti
+            // Se la data cambia, ricarica subito il file JSON così i suggerimenti sono pronti!
             if (ultimaDataCercata !== dateStr || !dbInUso) {
                 ultimaDataCercata = dateStr;
                 await caricaDbCorrente(dateStr);
@@ -503,8 +512,10 @@
             let dettagli = dbInUso[chiaveTrovata];
 
             if (dettagli) {
-                if(dettagli.inizio) document.getElementById('adOraInizio').value = dettagli.inizio;
-                if(dettagli.fine) document.getElementById('adOraFine').value = dettagli.fine;
+                // Formattiamo il tempo per evitare problemi col tag input type="time"
+                if(dettagli.inizio) document.getElementById('adOraInizio').value = formatTimeForInput(dettagli.inizio);
+                if(dettagli.fine) document.getElementById('adOraFine').value = formatTimeForInput(dettagli.fine);
+                
                 if(dettagli.luogoInizio) document.getElementById('adLuogoInizio').value = dettagli.luogoInizio;
                 if(dettagli.luogoFine) document.getElementById('adLuogoFine').value = dettagli.luogoFine;
                 
@@ -568,7 +579,6 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        // --- SISTEMA IMMAGINI / FALLBACK ---
         let currentImgPathFallback = "";
 
         window.apriImmagineTurno = function(codiceBase, chiave, dataDb, ini, fin, l_ini, l_fin) {
@@ -582,7 +592,6 @@
             document.getElementById('tktLuogoFine').innerText = l_fin || "--";
 
             if (chiave && dataDb) {
-                // Genera la rotta del file JPG
                 let primaryPath = `turni_${dataDb}/${chiave}.jpg`;
                 currentImgPathFallback = `turni_${dataDb}/${codiceBase}.jpg`;
                 
