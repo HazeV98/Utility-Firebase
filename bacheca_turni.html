@@ -242,7 +242,7 @@
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
         function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
 
-        // --- MOTORE LOGICA TURNI E LETTURA JSON ---
+        // --- MOTORE LOGICA TURNI E LETTURA JSON (IDENTICO A CALENDARIO.HTML) ---
         function stringToNum(s) { 
             if(!s) return 0; 
             let p = s.split('-'); 
@@ -257,48 +257,76 @@
 
         function trovaChiaveEsatta(db, codiceBase, dateStr) {
             if (!db || !codiceBase) return codiceBase;
+            
             let codiciDaCercare = [codiceBase];
             
+            // Regola 1: Linee da 1 a 9 con B (es. 1B01, 4B01)
             let matchB = codiceBase.match(/^([1-9])B(\d{2})$/);
             if (matchB) {
-                let linea = matchB[1]; let finale = matchB[2];
+                let linea = matchB[1];
+                let finale = matchB[2];
                 let letteraPilota = (linea === '1' || linea === '2') ? 'C' : 'P';
+                
                 let regex = new RegExp(`^${linea}[A-Z]${finale}$`);
                 let trovati = Object.keys(db).filter(k => regex.test(k));
-                if (trovati.length > 0) codiciDaCercare.push(...trovati);
-                else codiciDaCercare.push(`${linea}${letteraPilota}${finale}`);
+                if (trovati.length > 0) {
+                    codiciDaCercare.push(...trovati);
+                } else {
+                    codiciDaCercare.push(`${linea}${letteraPilota}${finale}`);
+                }
             } else {
+                // Regola 2: Per TUTTO IL RESTO vale la regola del +50 (es. 1251 -> 1201)
                 let match50 = codiceBase.match(/^([A-Z0-9]+?)(\d{2})$/);
                 if (match50) {
-                    let pref = match50[1]; let num = parseInt(match50[2], 10);
-                    if (num >= 50) codiciDaCercare.push(pref + String(num - 50).padStart(2, '0'));
+                    let pref = match50[1];
+                    let num = parseInt(match50[2], 10);
+                    if (num >= 50) {
+                        let numPilota = String(num - 50).padStart(2, '0');
+                        codiciDaCercare.push(pref + numPilota);
+                    }
                 }
             }
 
-            let targetDay = creaDataSicura(dateStr).getDay(); 
-            targetDay = targetDay === 0 ? 7 : targetDay; 
+            let giornoIdx = creaDataSicura(dateStr).getDay(); 
+            let targetDay = giornoIdx === 0 ? 7 : giornoIdx; 
             const dayMap = { "LUN": 1, "MAR": 2, "MER": 3, "GIO": 4, "VEN": 5, "SAB": 6, "DOM": 7 };
 
             for (let codCercato of codiciDaCercare) {
                 let keys = Object.keys(db).filter(k => k === codCercato || k.startsWith(codCercato + "_"));
-                let exactMatch = null; let genericMatch = null;
+                
+                let exactMatch = null;
+                let genericMatch = null;
+
                 for (let k of keys) {
-                    if (k === codCercato) { genericMatch = k; continue; }
+                    if (k === codCercato) {
+                        genericMatch = k;
+                        continue;
+                    }
+                    
                     let suffix = k.substring(codCercato.length + 1); 
+                    
                     if (suffix.includes("-")) {
                         let parts = suffix.split("-");
                         if (parts.length === 2 && dayMap[parts[0]] && dayMap[parts[1]]) {
-                            let start = dayMap[parts[0]]; let end = dayMap[parts[1]];
-                            if (start <= end) { if (targetDay >= start && targetDay <= end) exactMatch = k; } 
-                            else { if (targetDay >= start || targetDay <= end) exactMatch = k; }
+                            let start = dayMap[parts[0]];
+                            let end = dayMap[parts[1]];
+                            
+                            if (start <= end) { 
+                                if (targetDay >= start && targetDay <= end) exactMatch = k;
+                            } else { 
+                                if (targetDay >= start || targetDay <= end) exactMatch = k;
+                            }
                         }
                     } else {
-                        if (dayMap[suffix] && dayMap[suffix] === targetDay) exactMatch = k;
+                        if (dayMap[suffix] && dayMap[suffix] === targetDay) {
+                            exactMatch = k;
+                        }
                     }
                 }
                 if (exactMatch) return exactMatch;
                 if (genericMatch) return genericMatch;
             }
+            
             return codiceBase; 
         }
 
@@ -370,7 +398,7 @@
             }
         }
 
-        // --- Inizializzazione Panzoom (stile Calendario) ---
+        // --- Inizializzazione Panzoom ---
         document.addEventListener('DOMContentLoaded', function() {
             const imgElem = document.getElementById('turnoImage');
             if (typeof Panzoom !== 'undefined') {
@@ -603,18 +631,27 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        // --- Logica Immagine Identica a Calendario ---
-        window.apriImmagineTurno = function(codice, chiave, dataDb) {
-            if (!dataDb) {
+        // --- Logica Immagine Identica a Calendario.html ---
+        window.apriImmagineTurno = async function(codice, dataScambio) {
+            if (!codice || !dataScambio) {
                 alert("Dati mancanti per aprire l'immagine.");
                 return;
             }
             
-            if (chiave && chiave !== codice) { 
-                currentImagePath = `turni_${dataDb}/${chiave}.jpg`; 
-                imgBaseFallback = `turni_${dataDb}/${codice}.jpg`; 
+            // Assicurati che il database corretto per quella data sia caricato
+            if (ultimaDataCercata !== dataScambio || !dbInUso) {
+                ultimaDataCercata = dataScambio;
+                await caricaDbCorrente(dataScambio);
+            }
+
+            let dataAttiva = dataAttivaDb || "2026-03-02"; // Prende la cartella esatta come "2026-03-28"
+            let chiaveTrovata = trovaChiaveEsatta(dbInUso, codice, dataScambio);
+
+            if (chiaveTrovata && chiaveTrovata !== codice && dbInUso && dbInUso[chiaveTrovata]) { 
+                currentImagePath = `turni_${dataAttiva}/${chiaveTrovata}.jpg`; 
+                imgBaseFallback = `turni_${dataAttiva}/${codice}.jpg`; 
             } else { 
-                currentImagePath = `turni_${dataDb}/${codice}.jpg`; 
+                currentImagePath = `turni_${dataAttiva}/${codice}.jpg`; 
                 imgBaseFallback = ""; 
             }
             
@@ -721,14 +758,15 @@
                             `;
                         }
 
-                        // Generiamo semplicemente il pulsante: sarà il sistema onerror a gestire la mancanza!
+                        // Viene mostrato sempre il pulsante per i turni effettivi, ci pensa il visualizzatore a trovare la path!
                         let btnImmagine = "";
                         if (a.codice_turno) {
-                            // Usiamo la data di scambio del turno per comporre la cartella (nel formato YYYY-MM-DD o simile). 
-                            // Come "fallback" di sicurezza passiamo anche quello salvato se presente.
-                            let dataDbToPass = a.data_scambio || a.data_attiva_db || "2026-03-02";
+                            let codBase = a.codice_turno.toUpperCase();
+                            let isRiposo = (codBase === 'RI' || codBase === 'RIPOSO' || codBase === 'AL' || codBase === 'DISP' || codBase === 'NESSUN TURNO');
                             
-                            btnImmagine = `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${a.codice_turno}', '${a.chiave_esatta || ''}', '${dataDbToPass}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgCamera} Mostra Immagine Turno</button></div>`;
+                            if (!isRiposo) {
+                                btnImmagine = `<div style="margin-top: 10px;"><button onclick="apriImmagineTurno('${a.codice_turno}', '${a.data_scambio}')" style="background:transparent; border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; width: 100%; justify-content: center;">${svgCamera} Mostra Immagine Turno</button></div>`;
+                            }
                         }
 
                         corpoHTML = `
