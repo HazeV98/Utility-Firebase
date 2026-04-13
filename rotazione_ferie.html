@@ -39,12 +39,29 @@
         .badge-invernale { background: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
         .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end;}
         .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); }
+
+        /* Stili Menù Laterale */
+        #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
+        .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; }
     </style>
 </head>
 <body>
 
+    <div id="sidebar">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h3 style="margin: 0; color: var(--primary);">Menu</h3>
+            <span style="font-size: 28px; cursor: pointer; color: #666;" onclick="closeSidebar()">&times;</span>
+        </div>
+        <a href="index.html" class="sidebar-link">🏠 Home</a>
+        <a href="calendario.html" class="sidebar-link">📅 Calendario</a>
+        <a href="turni.html" class="sidebar-link">🔄 Turni</a>
+        <a href="rubrica.html" class="sidebar-link">📖 Rubrica Colleghi</a>
+    </div>
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
     <div class="header">
-        <a href="index.html" style="text-decoration: none; font-size: 24px; color: var(--primary);">←</a>
+        <span style="font-size: 24px; cursor: pointer; color: var(--primary);" onclick="openSidebar()">☰</span>
         <h2>🏖️ Ferie</h2>
         <div style="width: 24px;"></div>
     </div>
@@ -106,8 +123,18 @@
 
         <div id="panel-bacheca" style="display: none;">
             <button class="btn-action" style="margin-top: 0; margin-bottom: 15px;" onclick="apriModaleAnnuncio()">+ Inserisci Annuncio</button>
-            <div class="warning-box" style="text-align: center; margin-bottom: 15px;">
-                Filtro attivo: stai vedendo gli scambi per la tua mansione (<b><span id="label-mia-mansione"></span></b>)
+            
+            <div class="card" style="padding: 15px; margin-bottom: 15px;">
+                <label style="font-size: 12px; font-weight: bold; color: #666;">Filtro Mansione:</label>
+                <select id="filtroMansioneBacheca" class="input-field" style="margin-bottom: 0;" onchange="caricaBacheca()">
+                    <option value="Tutte">Tutte le mansioni</option>
+                    <option value="Marinaio">Marinaio</option>
+                    <option value="Preposto al comando">Preposto al comando</option>
+                    <option value="Comandante">Comandante</option>
+                    <option value="Timoniere">Timoniere</option>
+                    <option value="Marinaio polivalente">Marinaio polivalente</option>
+                    <option value="Direttore di macchina">Direttore di macchina</option>
+                </select>
             </div>
             
             <div id="suggeriti-bacheca-container" style="display: none; border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 15px;">
@@ -127,6 +154,13 @@
             <div class="warning-box">
                 ⚠️ <b>ATTENZIONE:</b> Inserisci i periodi che ti sono stati <b>ufficialmente assegnati</b> dalla rotazione, NON quelli che hai già scambiato. Serve per calcolare bene gli anni futuri.
             </div>
+
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Nome:</label>
+            <input type="text" id="regNome" class="input-field" placeholder="Tuo Nome">
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Cognome:</label>
+            <input type="text" id="regCognome" class="input-field" placeholder="Tuo Cognome">
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Telefono:</label>
+            <input type="tel" id="regTelefono" class="input-field" placeholder="Numero di Telefono">
             
             <label style="font-size: 12px; font-weight: bold; color: #666;">Anno di Assegnazione (es. corrente):</label>
             <input type="number" id="regAnno" class="input-field" value="">
@@ -200,7 +234,8 @@
         let userDataPrivate = {};
         let myFerieData = null;
         let listaUtentiFerie = [];
-        let myAnnunciAttivi = []; // Salva gli annunci dell'utente loggato per il matchmaking
+        let myAnnunciAttivi = []; 
+        let rubricaCondivisaSet = new Set(); // Salva chi ha condiviso il numero
         
         let jsonFerie = { estive: [], invernali: [] };
         const mesiEstivi = ["Giugno", "Luglio", "Agosto", "Settembre"];
@@ -208,7 +243,16 @@
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
 
         document.getElementById('searchAnno').value = new Date().getFullYear();
-        document.getElementById('regAnno').value = new Date().getFullYear();
+
+        // GESTIONE MENU SIDEBAR
+        window.openSidebar = function() {
+            document.getElementById('sidebar').style.left = '0';
+            document.getElementById('sidebar-overlay').style.display = 'block';
+        };
+        window.closeSidebar = function() {
+            document.getElementById('sidebar').style.left = '-260px';
+            document.getElementById('sidebar-overlay').style.display = 'none';
+        };
 
         async function loadJSONFerie() {
             try {
@@ -247,6 +291,14 @@
             }
         });
 
+        async function fetchRubrica() {
+            try {
+                const snap = await getDocs(collection(db, "rubrica"));
+                rubricaCondivisaSet.clear();
+                snap.forEach(doc => rubricaCondivisaSet.add(doc.id));
+            } catch(e) { console.error(e); }
+        }
+
         async function checkStato() {
             try {
                 const utenteRef = doc(db, "utenti", currentUser.uid);
@@ -258,10 +310,14 @@
                 
                 if (ferieSnap.exists()) {
                     myFerieData = ferieSnap.data();
-                    document.getElementById('label-mia-mansione').innerText = myFerieData.mansione;
-                    document.getElementById('searchMansione').value = myFerieData.mansione;
                     
-                    // Recupera gli annunci dell'utente per i suggerimenti
+                    // Imposta il filtro predefinito sulla propria mansione
+                    document.getElementById('searchMansione').value = myFerieData.mansione;
+                    document.getElementById('filtroMansioneBacheca').value = myFerieData.mansione;
+                    
+                    // Carica rubrica per verificare il permesso del pulsante WhatsApp
+                    await fetchRubrica();
+                    
                     const myAdsQ = query(collection(db, "bacheca_ferie"), where("uid", "==", currentUser.uid));
                     const myAdsSnap = await getDocs(myAdsQ);
                     myAnnunciAttivi = [];
@@ -279,27 +335,45 @@
         }
 
         window.apriModaleCondivisione = function() {
+            document.getElementById('regNome').value = userDataPrivate.nome || "";
+            document.getElementById('regCognome').value = userDataPrivate.cognome || "";
+            document.getElementById('regTelefono').value = userDataPrivate.telefono || "";
             document.getElementById('regMansione').value = userDataPrivate.mansione || "";
+            
+            if (myFerieData) {
+                document.getElementById('regAnno').value = myFerieData.anno_base;
+                document.getElementById('regEstive').value = myFerieData.periodo_estivo;
+                document.getElementById('regInvernali').value = myFerieData.periodo_invernale;
+            } else {
+                document.getElementById('regAnno').value = new Date().getFullYear();
+            }
+
             document.getElementById('shareModal').style.display = 'flex';
         };
 
         window.salvaFerie = async function() {
-            const anno = parseInt(document.getElementById('regAnno').value);
+            const n = document.getElementById('regNome').value.trim();
+            const c = document.getElementById('regCognome').value.trim();
+            const t = document.getElementById('regTelefono').value.trim();
             const man = document.getElementById('regMansione').value;
+            const anno = parseInt(document.getElementById('regAnno').value);
             const est = document.getElementById('regEstive').value;
             const inv = document.getElementById('regInvernali').value;
 
-            if(!anno || !man || !est || !inv) return alert("Compila tutti i campi!");
-            if(!userDataPrivate.nome || !userDataPrivate.cognome || !userDataPrivate.telefono) {
-                return alert("ERRORE: Profilo incompleto. Vai in Home -> Profilo e salva Nome, Cognome e Telefono.");
-            }
+            if(!n || !c || !t || !anno || !man || !est || !inv) return alert("Compila tutti i campi!");
 
             document.getElementById('btnSalvaFerie').innerText = "Salvataggio...";
-            const payload = { uid: currentUser.uid, nome: userDataPrivate.nome, cognome: userDataPrivate.cognome, telefono: userDataPrivate.telefono, mansione: man, anno_base: anno, periodo_estivo: est, periodo_invernale: inv };
+            
+            const payloadFerie = { uid: currentUser.uid, nome: n, cognome: c, telefono: t, mansione: man, anno_base: anno, periodo_estivo: est, periodo_invernale: inv };
+            const payloadUtente = { nome: n, cognome: c, telefono: t, mansione: man };
 
             try {
-                await setDoc(doc(db, "ferie_condivise", currentUser.uid), payload);
-                await setDoc(doc(db, "utenti", currentUser.uid), { mansione: man }, { merge: true });
+                await setDoc(doc(db, "ferie_condivise", currentUser.uid), payloadFerie);
+                await setDoc(doc(db, "utenti", currentUser.uid), payloadUtente, { merge: true });
+                
+                // Aggiorna variabili locali per evitare un ricaricamento asincrono sfasato
+                userDataPrivate.nome = n; userDataPrivate.cognome = c; userDataPrivate.telefono = t; userDataPrivate.mansione = man;
+                
                 document.getElementById('shareModal').style.display = 'none';
                 checkStato();
             } catch(e) { alert("Errore salvataggio"); document.getElementById('btnSalvaFerie').innerText = "Salva ed Entra"; }
@@ -329,10 +403,8 @@
             document.getElementById('panel-'+tabName).style.display = 'block';
         };
 
-        // --- MOTORE DI SUGGERIMENTO MATCH ---
         function controllaMatch(periodoCalcolato, tipo) {
             if (!periodoCalcolato || periodoCalcolato === "Non Trovato") return false;
-            // Controlla se il periodo del collega soddisfa uno dei miei annunci
             return myAnnunciAttivi.some(mioAnnuncio => {
                 if (mioAnnuncio.tipo_ferie !== tipo) return false;
                 if (mioAnnuncio.cerco_tipo === 'periodo') {
@@ -354,6 +426,7 @@
             const annoRicerca = parseInt(document.getElementById('searchAnno').value) || new Date().getFullYear();
             const mansioneFiltro = document.getElementById('searchMansione').value;
             const periodoFiltro = document.getElementById('searchPeriodo').value;
+            const isMeSharedInRubrica = rubricaCondivisaSet.has(currentUser.uid);
 
             try {
                 if(listaUtentiFerie.length === 0) {
@@ -376,12 +449,14 @@
                     trovati++;
                     const numClean = u.telefono.replace(/\s+/g, '');
                     const isMe = u.uid === currentUser.uid;
+                    const isPosterSharedInRubrica = rubricaCondivisaSet.has(u.uid);
                     
                     const isMatchEstivo = !isMe && controllaMatch(estiveCalcolate, 'estive');
                     const isMatchInvernale = !isMe && controllaMatch(invCalcolate, 'invernali');
-
                     const isSuggested = isMatchEstivo || isMatchInvernale;
                     if (isSuggested) suggeriti++;
+
+                    const showWa = !isMe && isMeSharedInRubrica && isPosterSharedInRubrica;
 
                     const itemClass = isSuggested ? "card-suggested" : "card";
                     const itemStyle = isSuggested ? "padding: 15px;" : "padding: 15px;";
@@ -396,7 +471,7 @@
                                     <div style="margin-top: 6px;"><span class="badge-invernale">❄️ ${invCalcolate}</span></div>
                                 </div>
                                 <div class="contact-actions" style="flex-direction:column; align-items:flex-end; justify-content:center;">
-                                    ${!isMe ? `<a href="https://wa.me/39${numClean}" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>` : ''}
+                                    ${showWa ? `<a href="https://wa.me/39${numClean}" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -425,6 +500,15 @@
             const cercoTipo = document.getElementById('adCercoTipo').value;
             
             popolaSelect(document.getElementById('adPeriodoOfferto'), jsonFerie[tipo]);
+            
+            // PRECOMPILAZIONE: Seleziona in automatico il periodo dell'utente se disponibile
+            if (myFerieData) {
+                const defaultPeriodo = tipo === 'estive' ? myFerieData.periodo_estivo : myFerieData.periodo_invernale;
+                const selectOfferto = document.getElementById('adPeriodoOfferto');
+                if (Array.from(selectOfferto.options).some(opt => opt.value === defaultPeriodo)) {
+                    selectOfferto.value = defaultPeriodo;
+                }
+            }
             
             const divMesi = document.getElementById('checkboxes-mesi');
             const contMesi = document.getElementById('cerco-mesi-container');
@@ -468,20 +552,28 @@
                 });
                 document.getElementById('adModal').style.display = 'none';
                 document.getElementById('btnSalvaAnnuncio').innerText = "Pubblica Annuncio";
-                checkStato(); // Ricarica tutto per far spuntare i suggeriti aggiornati
+                checkStato(); // Ricarica per i suggeriti
             } catch(e) { alert("Errore pubblicazione"); document.getElementById('btnSalvaAnnuncio').innerText = "Pubblica Annuncio"; }
         };
 
-        async function caricaBacheca() {
+        window.caricaBacheca = async function() {
             const containerRes = document.getElementById('lista-annunci');
             const containerSug = document.getElementById('suggeriti-bacheca');
             const divSugContainer = document.getElementById('suggeriti-bacheca-container');
+            const filtroMan = document.getElementById('filtroMansioneBacheca').value;
+            const isMeSharedInRubrica = rubricaCondivisaSet.has(currentUser.uid);
             
             containerRes.innerHTML = "<p>Caricamento annunci...</p>";
             containerSug.innerHTML = "";
             
             try {
-                const q = query(collection(db, "bacheca_ferie"), where("mansione", "==", myFerieData.mansione));
+                let q;
+                if (filtroMan === "Tutte") {
+                    q = query(collection(db, "bacheca_ferie"));
+                } else {
+                    q = query(collection(db, "bacheca_ferie"), where("mansione", "==", filtroMan));
+                }
+                
                 const snap = await getDocs(q);
                 
                 let annunci = [];
@@ -493,8 +585,8 @@
 
                 annunci.forEach(a => {
                     const isMe = a.uid === currentUser.uid;
+                    const isPosterSharedInRubrica = rubricaCondivisaSet.has(a.uid);
                     
-                    // Controlla se questo annuncio di un collega sta cedendo quello che io cerco
                     let isSuggested = false;
                     if (!isMe) {
                         isSuggested = myAnnunciAttivi.some(mioAnnuncio => {
@@ -514,8 +606,9 @@
                     const borderStyle = a.tipo_ferie === 'estive' ? "4px solid #ffc107" : "4px solid #17a2b8";
                     const itemClass = isSuggested ? "card-suggested" : "card";
                     const numClean = a.telefono.replace(/\s+/g, '');
-                    
                     const testoCerca = a.cerco_tipo === 'mesi' ? a.cerco_valori.join(', ') : a.cerco_valori[0];
+                    
+                    const showWa = !isMe && isMeSharedInRubrica && isPosterSharedInRubrica;
 
                     const html = `
                         <div class="${itemClass}" style="border-left: ${borderStyle}">
@@ -527,7 +620,7 @@
                                 </div>
                                 <div class="contact-actions" style="flex-direction:column; justify-content:center;">
                                     ${isMe ? `<button onclick="cancellaAnnuncio('${a.id}')" style="background:var(--danger); color:white; border:none; border-radius:4px; padding:5px; cursor:pointer;">🗑️</button>` 
-                                           : `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto il tuo annuncio in bacheca, cedi ${a.periodo_offerto}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>`}
+                                           : (showWa ? `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto il tuo annuncio in bacheca, cedi ${a.periodo_offerto}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent; height:auto;">${svgWa}</a>` : '')}
                                 </div>
                             </div>
                         </div>
@@ -538,7 +631,7 @@
                 });
 
                 divSugContainer.style.display = suggeriti > 0 ? 'block' : 'none';
-                if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio per la tua mansione.</p>";
+                if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio per i filtri selezionati.</p>";
 
             } catch(e) { containerRes.innerHTML = "<p>Errore bacheca</p>"; }
         }
