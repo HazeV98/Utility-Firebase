@@ -166,8 +166,7 @@
                 <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
                 
                 <label style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: none;">Codice Turno Ceduto:</label>
-                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Es. 1A, 4251..." list="turni-suggeriti" oninput="verificaTurno()">
-                <datalist id="turni-suggeriti"></datalist>
+                <input type="text" id="adCodiceTurno" class="input-field" placeholder="es. 1C01, 1B01 ecc..." oninput="this.value = this.value.toUpperCase(); verificaTurno()">
                 
                 <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none; display: block; margin-top: 5px;">Info Turno (Facoltativo):</label>
                 
@@ -229,7 +228,6 @@
         let currentUser = null;
         let userDataPrivate = {};
         let myAnnunciAttivi = []; 
-        let rubricaCondivisaSet = new Set();
         let stateCalendario = {}; 
 
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
@@ -365,17 +363,6 @@
             if (dbTrovato) {
                 dbInUso = dbTrovato;
                 dataAttivaDb = dataDbTrovata;
-                
-                // Popoliamo in modo sicuro la Datalist HTML
-                const dl = document.getElementById('turni-suggeriti');
-                let htmlOpzioni = "";
-                let basi = new Set();
-                Object.keys(dbTrovato).forEach(k => basi.add(k.split('_')[0])); 
-                
-                Array.from(basi).sort().forEach(cod => {
-                    htmlOpzioni += `<option value="${cod}"></option>`;
-                });
-                dl.innerHTML = htmlOpzioni;
             }
         }
 
@@ -394,14 +381,6 @@
                 document.getElementById('error-box').style.display = 'block';
             }
         });
-
-        async function fetchRubrica() {
-            try {
-                const snap = await getDocs(collection(db, "rubrica"));
-                rubricaCondivisaSet.clear();
-                snap.forEach(doc => rubricaCondivisaSet.add(doc.id));
-            } catch(e) {}
-        }
 
         async function checkStato() {
             try {
@@ -426,7 +405,6 @@
                 }
 
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
-                await fetchRubrica();
                 
                 const today = new Date().toISOString().split('T')[0];
                 const myAdsQ = query(collection(db, "bacheca_turni"), where("uid", "==", currentUser.uid));
@@ -464,7 +442,6 @@
             document.getElementById('adModal').style.display = 'flex';
             switchAdTab('turno');
             
-            // Inserisci subito la data di oggi
             let todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('adDataTurno').value = todayStr;
             
@@ -474,7 +451,6 @@
             document.getElementById('adDataRestituzione1').value = ""; 
             document.getElementById('adDataRestituzione2').value = "";
 
-            // Carica la datalist JSON in background per i suggerimenti
             await verificaTurno(); 
         };
 
@@ -497,13 +473,11 @@
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
-            // Se la data cambia, ricarichiamo il JSON per i suggerimenti pertinenti
             if (ultimaDataCercata !== dateStr || !dbInUso) {
                 ultimaDataCercata = dateStr;
                 await caricaDbCorrente(dateStr);
             }
 
-            // Trasforma in uppercase via codice JS per non chiudere la Datalist all'utente
             const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
             
             if (!codiceBase || !dbInUso) {
@@ -515,7 +489,6 @@
             let dettagli = dbInUso[chiaveTrovata];
 
             if (dettagli) {
-                // Formattiamo il tempo per HTML5 input time
                 if(dettagli.inizio) document.getElementById('adOraInizio').value = formatTimeForInput(dettagli.inizio);
                 if(dettagli.fine) document.getElementById('adOraFine').value = formatTimeForInput(dettagli.fine);
                 
@@ -542,7 +515,6 @@
                 const dataT = document.getElementById('adDataTurno').value;
                 if(!dataT) return alert("Inserisci la data del turno.");
                 
-                // Recupera il codice in uppercase
                 const codiceT = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
                 if(!codiceT) return alert("Devi inserire il codice del turno che stai cedendo.");
 
@@ -637,7 +609,6 @@
             const fMan = document.getElementById('filtroMansione').value;
             const fData = document.getElementById('filtroData').value;
             const today = new Date().toISOString().split('T')[0];
-            const isMeSharedInRubrica = rubricaCondivisaSet.has(currentUser.uid);
 
             containerRes.innerHTML = "<p style='color:#666;'>Caricamento annunci in corso...</p>";
             containerSug.innerHTML = "";
@@ -659,7 +630,6 @@
 
                 annunci.forEach(a => {
                     const isMe = a.uid === currentUser.uid;
-                    const isPosterSharedInRubrica = rubricaCondivisaSet.has(a.uid);
                     
                     let isSuggested = false;
                     if (!isMe) {
@@ -670,7 +640,8 @@
                     }
                     if (isSuggested) suggeriti++;
 
-                    const showWa = !isMe && isMeSharedInRubrica && isPosterSharedInRubrica;
+                    // Rimosso il limite della rubrica: l'icona di whatsapp compare sempre a patto che ci sia il numero e non sia il proprio annuncio
+                    const showWa = !isMe && a.telefono; 
                     const itemClass = isSuggested ? "card-suggested" : "card";
                     const numClean = (a.telefono||"").replace(/\s+/g, '');
                     const dateFormatted = formattaData(a.data_scambio);
@@ -692,12 +663,13 @@
                         `;
                     }
 
+                    // Aggiunta visibilità esplicita del numero di telefono oltre alla matricola
                     const html = `
                         <div class="${itemClass}">
                             <div style="display:flex; justify-content: space-between;">
                                 <div style="flex: 1;">
                                     <div style="font-weight:bold; color:var(--text-color); margin-bottom: 2px;">${a.cognome} ${a.nome}</div>
-                                    <div style="font-size:11px; color:#666; margin-bottom: 8px;">${a.mansione} | Mat: ${a.matricola}</div>
+                                    <div style="font-size:11px; color:#666; margin-bottom: 8px;">${a.mansione} | Mat: ${a.matricola} | Tel: ${a.telefono}</div>
                                     ${corpoHTML}
                                 </div>
                                 <div class="contact-actions" style="flex-direction:column; justify-content:center; padding-left: 10px;">
@@ -727,4 +699,3 @@
     </script>
 </body>
 </html>
- 
