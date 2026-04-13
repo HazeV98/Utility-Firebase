@@ -20,7 +20,8 @@
         .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
         .btn-action:active { opacity: 0.8; }
         
-        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white;}
+        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white; text-transform: uppercase;}
+        .input-field::placeholder { text-transform: none; }
         .suggested-header { font-size: 14px; font-weight: bold; color: #856404; text-align: left; margin-bottom: 10px; margin-top: 5px; }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
@@ -47,7 +48,7 @@
         /* Sidebar */
         #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
-        .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; }
+        .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; text-transform: none; }
     </style>
 </head>
 <body>
@@ -73,7 +74,7 @@
     <div id="view-no-auth" class="view-container">
         <div class="card" style="text-align: center;">
             <h3 style="color: var(--danger);">Accesso Richiesto</h3>
-            <p style="color: #666; font-size: 15px; line-height: 1.5;">Per accedere alla bacheca scambi devi effettuare il login tramite la Home page.</p>
+            <p style="color: #666; font-size: 15px; line-height: 1.5; text-transform: none;">Per accedere alla bacheca scambi devi effettuare il login tramite la Home page.</p>
             <button class="btn-action" style="background-color: var(--primary);" onclick="window.location.href='index.html'">Torna alla Home</button>
         </div>
     </div>
@@ -84,8 +85,8 @@
         <div class="card" style="padding: 15px; margin-bottom: 15px;">
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label style="font-size: 11px; font-weight: bold; color: #666;">Filtra Mansione:</label>
-                    <select id="filtroMansione" class="input-field" style="margin-bottom: 0;" onchange="caricaBacheca()">
+                    <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Filtra Mansione:</label>
+                    <select id="filtroMansione" class="input-field" style="margin-bottom: 0; text-transform: none;" onchange="caricaBacheca()">
                         <option value="Tutte">Tutte le mansioni</option>
                         <option value="Marinaio">Marinaio</option>
                         <option value="Preposto al comando">Preposto al comando</option>
@@ -96,14 +97,14 @@
                     </select>
                 </div>
                 <div style="flex: 1;">
-                    <label style="font-size: 11px; font-weight: bold; color: #666;">Filtra Data:</label>
-                    <input type="date" id="filtroData" class="input-field" style="margin-bottom: 0;" onchange="caricaBacheca()">
+                    <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Filtra Data:</label>
+                    <input type="date" id="filtroData" class="input-field" style="margin-bottom: 0; text-transform: none;" onchange="caricaBacheca()">
                 </div>
             </div>
         </div>
         
         <div id="suggeriti-bacheca-container" style="display: none; border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 15px;">
-            <div class="suggested-header">✨ Suggeriti per te (Offrono ciò che cerchi)</div>
+            <div class="suggested-header" style="text-transform: none;">✨ Suggeriti per te (Offrono ciò che cerchi)</div>
             <div id="suggeriti-bacheca"></div>
         </div>
 
@@ -112,13 +113,13 @@
 
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Completa il Profilo</h3>
-            <p style="font-size: 13px; color: #666; text-align: center;">Per usare la bacheca servono i tuoi dati completi.</p>
-            <input type="text" id="regNome" class="input-field" placeholder="Nome">
-            <input type="text" id="regCognome" class="input-field" placeholder="Cognome">
+            <h3 style="margin-top: 5px; color: #32325d; text-align: center; text-transform: none;">Completa il Profilo</h3>
+            <p style="font-size: 13px; color: #666; text-align: center; text-transform: none;">Per usare la bacheca servono i tuoi dati completi.</p>
+            <input type="text" id="regNome" class="input-field" placeholder="Nome" style="text-transform: capitalize;">
+            <input type="text" id="regCognome" class="input-field" placeholder="Cognome" style="text-transform: capitalize;">
             <input type="text" id="regMatricola" class="input-field" placeholder="Matricola">
-            <input type="tel" id="regTelefono" class="input-field" placeholder="Telefono (per WhatsApp)">
-            <select id="regMansione" class="input-field">
+            <input type="tel" id="regTelefono" class="input-field" placeholder="Telefono (per WhatsApp)" style="text-transform: none;">
+            <select id="regMansione" class="input-field" style="text-transform: none;">
                 <option value="">-- Seleziona Mansione --</option>
                 <option value="Marinaio">Marinaio</option>
                 <option value="Preposto al comando">Preposto al comando</option>
@@ -134,7 +135,7 @@
     <div id="adModal" class="modal-overlay">
         <div class="modal-content">
             <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('adModal').style.display='none'">&times;</span>
-            <h3 style="margin-top: 5px; color: #32325d;">Crea Annuncio</h3>
+            <h3 style="margin-top: 5px; color: #32325d; text-transform: none;">Crea Annuncio</h3>
             
             <div class="tabs">
                 <button id="tab-ad-turno" class="tab-btn active" onclick="switchAdTab('turno')">Cambio Turno</button>
@@ -142,21 +143,21 @@
             </div>
 
             <div id="form-ad-turno">
-                <label style="font-size: 11px; font-weight: bold; color: #666;">Data del cambio:</label>
-                <input type="date" id="adDataTurno" class="input-field" onchange="verificaTurno()">
+                <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Data del cambio:</label>
+                <input type="date" id="adDataTurno" class="input-field" style="text-transform: none;" onchange="verificaTurno()">
                 
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
-                        <label style="font-size: 11px; font-weight: bold; color: #666;">Cerco:</label>
-                        <select id="adCercoTurno" class="input-field">
+                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cerco:</label>
+                        <select id="adCercoTurno" class="input-field" style="text-transform: none;">
                             <option value="primo">Primo</option>
                             <option value="mezzo">Mezzo</option>
                             <option value="terzo">Terzo</option>
                         </select>
                     </div>
                     <div style="flex: 1;">
-                        <label style="font-size: 11px; font-weight: bold; color: #666;">Cedo:</label>
-                        <select id="adCedoTurno" class="input-field">
+                        <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cedo:</label>
+                        <select id="adCedoTurno" class="input-field" style="text-transform: none;">
                             <option value="primo">Primo</option>
                             <option value="mezzo">Mezzo</option>
                             <option value="terzo">Terzo</option>
@@ -165,16 +166,18 @@
                 </div>
 
                 <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
-                <label style="font-size: 11px; font-weight: bold; color: var(--primary);">Dettagli Turno Ceduto (Facoltativo):</label>
-                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Codice Turno (es. 1A, 4251...)" oninput="verificaTurno()">
+                
+                <label style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: none;">Codice Turno Ceduto (*Obbligatorio):</label>
+                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Es. 1A, 4251..." list="turni-suggeriti" oninput="this.value = this.value.toUpperCase(); verificaTurno()">
+                <datalist id="turni-suggeriti"></datalist>
                 
                 <div style="display: flex; gap: 10px;">
-                    <input type="time" id="adOraInizio" class="input-field" placeholder="Ora Inizio" style="flex:1;">
-                    <input type="text" id="adLuogoInizio" class="input-field" placeholder="Luogo Inizio" style="flex:2;">
+                    <input type="time" id="adOraInizio" class="input-field" placeholder="Ora Inizio" style="flex:1; text-transform: none;">
+                    <input type="text" id="adLuogoInizio" class="input-field" placeholder="Luogo Inizio" style="flex:2; text-transform: none;">
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <input type="time" id="adOraFine" class="input-field" placeholder="Ora Fine" style="flex:1;">
-                    <input type="text" id="adLuogoFine" class="input-field" placeholder="Luogo Fine" style="flex:2;">
+                    <input type="time" id="adOraFine" class="input-field" placeholder="Ora Fine" style="flex:1; text-transform: none;">
+                    <input type="text" id="adLuogoFine" class="input-field" placeholder="Luogo Fine" style="flex:2; text-transform: none;">
                 </div>
                 
                 <input type="hidden" id="adChiaveEsatta">
@@ -182,13 +185,13 @@
             </div>
 
             <div id="form-ad-riposo" style="display: none;">
-                <label style="font-size: 11px; font-weight: bold; color: #666;">Cerco Riposo il giorno:</label>
-                <input type="date" id="adDataRiposo" class="input-field">
+                <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Cerco Riposo il giorno:</label>
+                <input type="date" id="adDataRiposo" class="input-field" style="text-transform: none;">
                 
-                <label style="font-size: 11px; font-weight: bold; color: #666;">Giorni in cui posso restituirlo (Facoltativo):</label>
-                <input type="date" id="adDataRestituzione1" class="input-field" style="margin-bottom: 5px;">
-                <input type="date" id="adDataRestituzione2" class="input-field">
-                <p style="font-size: 10px; color: #999; margin-top: 0;">Puoi lasciare vuoto se vuoi concordarlo in chat.</p>
+                <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none;">Giorni in cui posso restituirlo (Facoltativo):</label>
+                <input type="date" id="adDataRestituzione1" class="input-field" style="margin-bottom: 5px; text-transform: none;">
+                <input type="date" id="adDataRestituzione2" class="input-field" style="text-transform: none;">
+                <p style="font-size: 10px; color: #999; margin-top: 0; text-transform: none;">Puoi lasciare vuoto se vuoi concordarlo in chat.</p>
             </div>
 
             <button id="btnPubblica" class="btn-action" onclick="pubblicaAnnuncio()">Pubblica Annuncio</button>
@@ -236,7 +239,7 @@
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
         function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
 
-        // --- MOTORE LOGICA TURNI (Sincronizzato al millimetro col Calendario) ---
+        // --- MOTORE LOGICA TURNI E LETTURA JSON ---
         function stringToNum(s) { 
             if(!s) return 0; 
             let p = s.split('-'); 
@@ -303,6 +306,72 @@
             } catch(e) {}
         }
 
+        // Variabili globali per la gestione della Cache DB JSON
+        let dbInUso = null;
+        let dataAttivaDb = "";
+        let ultimaDataCercata = "";
+
+        async function caricaDbCorrente(dateStr) {
+            let dbTrovato = null;
+            let dataDbTrovata = "";
+
+            // 1. Cerca nella cache locale di calendario.html
+            if (stateCalendario && stateCalendario.dbCache) {
+                const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
+                if (dateChiavi.length > 0) {
+                    const dSelezionataNum = stringToNum(dateStr);
+                    for (let i = dateChiavi.length - 1; i >= 0; i--) { 
+                        if (dSelezionataNum >= stringToNum(dateChiavi[i])) { 
+                            dbTrovato = stateCalendario.dbCache[dateChiavi[i]];
+                            dataDbTrovata = dateChiavi[i];
+                            break;
+                        } 
+                    }
+                    if(!dbTrovato) { // Fallback al primo disponibile
+                        dbTrovato = stateCalendario.dbCache[dateChiavi[0]];
+                        dataDbTrovata = dateChiavi[0];
+                    }
+                }
+            }
+
+            // 2. Se non lo trovi in cache, prova a scaricare direttamente il JSON!
+            if (!dbTrovato) {
+                try {
+                    let res = await fetch(`info_turni_${dateStr}.json`);
+                    if (res.ok) {
+                        dbTrovato = await res.json();
+                        dataDbTrovata = dateStr;
+                    } else { throw new Error("Not found"); }
+                } catch(e) {
+                    // Fallback al database stabile se l'utente non ha aperto prima il calendario
+                    try {
+                        let res2 = await fetch(`info_turni_2026-03-02.json`);
+                        if(res2.ok) {
+                            dbTrovato = await res2.json();
+                            dataDbTrovata = "2026-03-02";
+                        }
+                    } catch(ex) { console.error("Impossibile caricare i turni JSON"); }
+                }
+            }
+
+            // Se l'ha trovato (in locale o via internet), genera l'autocompletamento (Datalist)
+            if (dbTrovato) {
+                dbInUso = dbTrovato;
+                dataAttivaDb = dataDbTrovata;
+                
+                const dl = document.getElementById('turni-suggeriti');
+                dl.innerHTML = "";
+                let basi = new Set();
+                Object.keys(dbTrovato).forEach(k => basi.add(k.split('_')[0])); // Rimuovi _LUN per suggerire il turno pulito
+                
+                Array.from(basi).sort().forEach(cod => {
+                    let opt = document.createElement('option');
+                    opt.value = cod;
+                    dl.appendChild(opt);
+                });
+            }
+        }
+
         onAuthStateChanged(auth, async (user) => {
             try {
                 nascondiTutto();
@@ -335,12 +404,12 @@
 
                 const ok = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.matricola && userDataPrivate.mansione && userDataPrivate.telefono;
                 
-                // MOSTRIAMO SEMPRE LO SFONDO DEL MAIN, così la pagina non è mai bianca!
+                // MOSTRA SEMPRE IL MAIN PER EVITARE SCHERMATE BIANCHE
                 nascondiTutto();
                 document.getElementById('view-main').style.display = 'flex';
 
                 if (!ok) {
-                    // Precompila col salvato finora
+                    // Precompila col salvato finora se c'è
                     document.getElementById('regNome').value = userDataPrivate.nome || "";
                     document.getElementById('regCognome').value = userDataPrivate.cognome || "";
                     document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
@@ -348,7 +417,7 @@
                     document.getElementById('regMansione').value = userDataPrivate.mansione || "";
                     
                     document.getElementById('profileModal').style.display = 'flex';
-                    return; // Fermati qui finché non compila
+                    return; // Ferma il caricamento della bacheca finché non salva
                 }
 
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
@@ -408,31 +477,30 @@
             document.getElementById('form-ad-riposo').style.display = type === 'riposo' ? 'block' : 'none';
         };
 
-        // IL CUORE DELLA LETTURA TURNI (Risolve la chiave esatta e prepara per la .jpg)
-        window.verificaTurno = function() {
+        function svuotaCampiTurno() {
+            document.getElementById('adOraInizio').value = ""; document.getElementById('adOraFine').value = "";
+            document.getElementById('adLuogoInizio').value = ""; document.getElementById('adLuogoFine').value = "";
+            document.getElementById('adChiaveEsatta').value = ""; document.getElementById('adDataAttivaDb').value = "";
+        }
+
+        window.verificaTurno = async function() {
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
-            const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
-            if (!codiceBase || !stateCalendario || !stateCalendario.dbCache) return;
-            
-            const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
-            if(dateChiavi.length === 0) return;
-
-            let dbCorrente = {};
-            let dataAttiva = dateChiavi[0];
-            const dSelezionataNum = stringToNum(dateStr);
-            
-            for (let i = dateChiavi.length - 1; i >= 0; i--) { 
-                if (dSelezionataNum >= stringToNum(dateChiavi[i])) { 
-                    dbCorrente = stateCalendario.dbCache[dateChiavi[i]]; 
-                    dataAttiva = dateChiavi[i]; 
-                    break; 
-                } 
+            // Se la data cambia, scarica il JSON della nuova data per i suggerimenti
+            if (ultimaDataCercata !== dateStr || !dbInUso) {
+                ultimaDataCercata = dateStr;
+                await caricaDbCorrente(dateStr);
             }
-            
-            let chiaveTrovata = trovaChiaveEsatta(dbCorrente, codiceBase, dateStr); 
-            let dettagli = dbCorrente[chiaveTrovata];
+
+            const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+            if (!codiceBase || !dbInUso) {
+                svuotaCampiTurno();
+                return;
+            }
+
+            let chiaveTrovata = trovaChiaveEsatta(dbInUso, codiceBase, dateStr); 
+            let dettagli = dbInUso[chiaveTrovata];
 
             if (dettagli) {
                 if(dettagli.inizio) document.getElementById('adOraInizio').value = dettagli.inizio;
@@ -441,10 +509,9 @@
                 if(dettagli.luogoFine) document.getElementById('adLuogoFine').value = dettagli.luogoFine;
                 
                 document.getElementById('adChiaveEsatta').value = chiaveTrovata;
-                document.getElementById('adDataAttivaDb').value = dataAttiva;
+                document.getElementById('adDataAttivaDb').value = dataAttivaDb;
             } else {
-                document.getElementById('adChiaveEsatta').value = "";
-                document.getElementById('adDataAttivaDb').value = "";
+                svuotaCampiTurno();
             }
         };
 
@@ -460,10 +527,14 @@
             if (adTypeSelezionato === 'turno') {
                 const dataT = document.getElementById('adDataTurno').value;
                 if(!dataT) return alert("Inserisci la data del turno.");
+                
+                const codiceT = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+                if(!codiceT) return alert("Devi inserire il codice del turno che stai cedendo.");
+
                 payload.data_scambio = dataT;
                 payload.cerco = document.getElementById('adCercoTurno').value;
                 payload.cedo = document.getElementById('adCedoTurno').value;
-                payload.codice_turno = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+                payload.codice_turno = codiceT;
                 payload.ora_inizio = document.getElementById('adOraInizio').value;
                 payload.ora_fine = document.getElementById('adOraFine').value;
                 payload.luogo_inizio = document.getElementById('adLuogoInizio').value;
@@ -497,7 +568,7 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        // --- SISTEMA IMMAGINI / FALLBACK (COME NEL CALENDARIO) ---
+        // --- SISTEMA IMMAGINI / FALLBACK ---
         let currentImgPathFallback = "";
 
         window.apriImmagineTurno = function(codiceBase, chiave, dataDb, ini, fin, l_ini, l_fin) {
@@ -511,7 +582,7 @@
             document.getElementById('tktLuogoFine').innerText = l_fin || "--";
 
             if (chiave && dataDb) {
-                // Genera la rotta del file JPG esattamente come in calendario.html
+                // Genera la rotta del file JPG
                 let primaryPath = `turni_${dataDb}/${chiave}.jpg`;
                 currentImgPathFallback = `turni_${dataDb}/${codiceBase}.jpg`;
                 
