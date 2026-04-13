@@ -165,9 +165,11 @@
 
                 <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
                 
-                <label style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: none;">Codice Turno Ceduto (*Obbligatorio):</label>
-                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Es. 1A, 4251..." list="turni-suggeriti" oninput="this.value = this.value.toUpperCase(); verificaTurno()">
+                <label style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: none;">Codice Turno Ceduto:</label>
+                <input type="text" id="adCodiceTurno" class="input-field" placeholder="Es. 1A, 4251..." list="turni-suggeriti" oninput="verificaTurno()">
                 <datalist id="turni-suggeriti"></datalist>
+                
+                <label style="font-size: 11px; font-weight: bold; color: #666; text-transform: none; display: block; margin-top: 5px;">Info Turno (Facoltativo):</label>
                 
                 <div style="display: flex; gap: 10px;">
                     <input type="time" id="adOraInizio" class="input-field" placeholder="Ora Inizio" style="flex:1; text-transform: none;">
@@ -297,7 +299,7 @@
             return codiceBase; 
         }
 
-        // Funzione per formattare orari ad un tempo accettato dai campi <input type="time"> (es. 6:00 -> 06:00)
+        // FORMATTAZIONE ORA CORRETTA PER INPUT TYPE="TIME"
         function formatTimeForInput(timeStr) {
             if (!timeStr) return "";
             let parts = timeStr.replace('.', ':').split(':');
@@ -364,17 +366,16 @@
                 dbInUso = dbTrovato;
                 dataAttivaDb = dataDbTrovata;
                 
-                // Popoliamo subito i suggerimenti appena la finestra o la data cambia
+                // Popoliamo in modo sicuro la Datalist HTML
                 const dl = document.getElementById('turni-suggeriti');
-                dl.innerHTML = "";
+                let htmlOpzioni = "";
                 let basi = new Set();
                 Object.keys(dbTrovato).forEach(k => basi.add(k.split('_')[0])); 
                 
                 Array.from(basi).sort().forEach(cod => {
-                    let opt = document.createElement('option');
-                    opt.value = cod;
-                    dl.appendChild(opt);
+                    htmlOpzioni += `<option value="${cod}"></option>`;
                 });
+                dl.innerHTML = htmlOpzioni;
             }
         }
 
@@ -463,7 +464,7 @@
             document.getElementById('adModal').style.display = 'flex';
             switchAdTab('turno');
             
-            // Imposta subito la data di oggi per precaricare i suggerimenti
+            // Inserisci subito la data di oggi
             let todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('adDataTurno').value = todayStr;
             
@@ -473,7 +474,7 @@
             document.getElementById('adDataRestituzione1').value = ""; 
             document.getElementById('adDataRestituzione2').value = "";
 
-            // Forza il caricamento del database JSON prima che l'utente scriva
+            // Carica la datalist JSON in background per i suggerimenti
             await verificaTurno(); 
         };
 
@@ -496,13 +497,15 @@
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
-            // Se la data cambia, ricarica subito il file JSON così i suggerimenti sono pronti!
+            // Se la data cambia, ricarichiamo il JSON per i suggerimenti pertinenti
             if (ultimaDataCercata !== dateStr || !dbInUso) {
                 ultimaDataCercata = dateStr;
                 await caricaDbCorrente(dateStr);
             }
 
+            // Trasforma in uppercase via codice JS per non chiudere la Datalist all'utente
             const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
+            
             if (!codiceBase || !dbInUso) {
                 svuotaCampiTurno();
                 return;
@@ -512,7 +515,7 @@
             let dettagli = dbInUso[chiaveTrovata];
 
             if (dettagli) {
-                // Formattiamo il tempo per evitare problemi col tag input type="time"
+                // Formattiamo il tempo per HTML5 input time
                 if(dettagli.inizio) document.getElementById('adOraInizio').value = formatTimeForInput(dettagli.inizio);
                 if(dettagli.fine) document.getElementById('adOraFine').value = formatTimeForInput(dettagli.fine);
                 
@@ -539,6 +542,7 @@
                 const dataT = document.getElementById('adDataTurno').value;
                 if(!dataT) return alert("Inserisci la data del turno.");
                 
+                // Recupera il codice in uppercase
                 const codiceT = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
                 if(!codiceT) return alert("Devi inserire il codice del turno che stai cedendo.");
 
