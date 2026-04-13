@@ -39,11 +39,12 @@
         .contact-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px;}
         .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); cursor: pointer;}
 
-        /* Ticket Turno Testuale (Fallback se non c'è immagine) */
+        /* Ticket Turno (Fallback se non c'è immagine) */
         .ticket-turno { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px dashed #adb5bd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 15px; display: none;}
         .ticket-code { font-size: 24px; font-weight: bold; color: var(--primary); letter-spacing: 2px; margin-bottom: 10px;}
         .ticket-row { display: flex; justify-content: space-between; font-size: 13px; color: #495057; margin-bottom: 5px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;}
 
+        /* Sidebar */
         #sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 6000; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5999; }
         .sidebar-link { text-decoration: none; color: #333; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 16px; font-weight: bold; }
@@ -112,7 +113,7 @@
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top: 5px; color: #32325d; text-align: center;">Completa il Profilo</h3>
-            <p style="font-size: 13px; color: #666; text-align: center;">Per pubblicare annunci servono i tuoi dati.</p>
+            <p style="font-size: 13px; color: #666; text-align: center;">Per usare la bacheca servono i tuoi dati completi.</p>
             <input type="text" id="regNome" class="input-field" placeholder="Nome">
             <input type="text" id="regCognome" class="input-field" placeholder="Cognome">
             <input type="text" id="regMatricola" class="input-field" placeholder="Matricola">
@@ -183,6 +184,7 @@
             <div id="form-ad-riposo" style="display: none;">
                 <label style="font-size: 11px; font-weight: bold; color: #666;">Cerco Riposo il giorno:</label>
                 <input type="date" id="adDataRiposo" class="input-field">
+                
                 <label style="font-size: 11px; font-weight: bold; color: #666;">Giorni in cui posso restituirlo (Facoltativo):</label>
                 <input type="date" id="adDataRestituzione1" class="input-field" style="margin-bottom: 5px;">
                 <input type="date" id="adDataRestituzione2" class="input-field">
@@ -206,9 +208,10 @@
                 <div class="ticket-row"><b>Fine:</b> <span id="tktFine">--</span></div>
                 <div class="ticket-row" style="border: none;"><b>Luogo:</b> <span id="tktLuogoFine">--</span></div>
             </div>
-            
         </div>
     </div>
+
+    <div id="error-box" style="display: none; padding: 20px; color: red; text-align: center; width: 100%;"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
@@ -224,7 +227,7 @@
         let userDataPrivate = {};
         let myAnnunciAttivi = []; 
         let rubricaCondivisaSet = new Set();
-        let stateCalendario = {}; // La cache completa del calendario locale
+        let stateCalendario = {}; // La cache completa del calendario locale salvata nel localStorage
 
         const svgWa = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
         const svgEye = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
@@ -233,7 +236,7 @@
         window.closeSidebar = () => { document.getElementById('sidebar').style.left = '-260px'; document.getElementById('sidebar-overlay').style.display = 'none'; };
         function nascondiTutto() { document.querySelectorAll('.view-container').forEach(e => e.style.display='none'); }
 
-        // --- MOTORE LOGICA TURNI (Come da Calendario) ---
+        // --- MOTORE LOGICA TURNI (Sincronizzato al millimetro col Calendario) ---
         function stringToNum(s) { 
             if(!s) return 0; 
             let p = s.split('-'); 
@@ -301,13 +304,18 @@
         }
 
         onAuthStateChanged(auth, async (user) => {
-            nascondiTutto();
-            if (user) {
-                currentUser = user;
-                caricaDatiLocali();
-                await checkStato();
-            } else {
-                document.getElementById('view-no-auth').style.display = 'flex';
+            try {
+                nascondiTutto();
+                if (user) {
+                    currentUser = user;
+                    caricaDatiLocali();
+                    await checkStato();
+                } else {
+                    document.getElementById('view-no-auth').style.display = 'flex';
+                }
+            } catch(err) {
+                document.getElementById('error-box').innerHTML = "Errore di connessione o lettura dati: " + err.message;
+                document.getElementById('error-box').style.display = 'block';
             }
         });
 
@@ -326,9 +334,21 @@
                 if (utenteSnap.exists()) userDataPrivate = utenteSnap.data();
 
                 const ok = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.matricola && userDataPrivate.mansione && userDataPrivate.telefono;
+                
+                // MOSTRIAMO SEMPRE LO SFONDO DEL MAIN, così la pagina non è mai bianca!
+                nascondiTutto();
+                document.getElementById('view-main').style.display = 'flex';
+
                 if (!ok) {
+                    // Precompila col salvato finora
+                    document.getElementById('regNome').value = userDataPrivate.nome || "";
+                    document.getElementById('regCognome').value = userDataPrivate.cognome || "";
+                    document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
+                    document.getElementById('regTelefono').value = userDataPrivate.telefono || "";
+                    document.getElementById('regMansione').value = userDataPrivate.mansione || "";
+                    
                     document.getElementById('profileModal').style.display = 'flex';
-                    return; 
+                    return; // Fermati qui finché non compila
                 }
 
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
@@ -343,8 +363,6 @@
                     if(a.data_scambio >= today) myAnnunciAttivi.push(a);
                 });
 
-                nascondiTutto();
-                document.getElementById('view-main').style.display = 'flex';
                 window.caricaBacheca();
             } catch (error) { console.error(error); }
         }
@@ -356,14 +374,14 @@
             const tel = document.getElementById('regTelefono').value.trim();
             const man = document.getElementById('regMansione').value;
 
-            if(!n || !c || !mat || !tel || !man) return alert("Compila tutti i campi.");
+            if(!n || !c || !mat || !tel || !man) return alert("Compila tutti i campi per usare la bacheca.");
             
-            document.getElementById('btnSalvaProfilo').innerText = "Salvataggio...";
+            document.getElementById('btnSalvaProfilo').innerText = "⏳ Salvataggio...";
             try {
                 await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, matricola: mat, telefono: tel, mansione: man }, { merge: true });
                 document.getElementById('profileModal').style.display = 'none';
                 checkStato();
-            } catch(e) { alert("Errore"); }
+            } catch(e) { alert("Errore"); document.getElementById('btnSalvaProfilo').innerText = "Salva e Continua"; }
         };
 
         // --- GESTIONE MODALE ANNUNCI ---
@@ -390,18 +408,19 @@
             document.getElementById('form-ad-riposo').style.display = type === 'riposo' ? 'block' : 'none';
         };
 
-        // IL CUORE DELLA LETTURA TURNI (Da calendario)
+        // IL CUORE DELLA LETTURA TURNI (Risolve la chiave esatta e prepara per la .jpg)
         window.verificaTurno = function() {
             let dateStr = document.getElementById('adDataTurno').value;
             if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
             
             const codiceBase = document.getElementById('adCodiceTurno').value.trim().toUpperCase();
-            if (!codiceBase || !stateCalendario.dbCache) return;
+            if (!codiceBase || !stateCalendario || !stateCalendario.dbCache) return;
             
-            // Trova db attivo per la data
             const dateChiavi = Object.keys(stateCalendario.dbCache).sort();
+            if(dateChiavi.length === 0) return;
+
             let dbCorrente = {};
-            let dataAttiva = dateChiavi[0] || "2026-03-02";
+            let dataAttiva = dateChiavi[0];
             const dSelezionataNum = stringToNum(dateStr);
             
             for (let i = dateChiavi.length - 1; i >= 0; i--) { 
@@ -412,7 +431,6 @@
                 } 
             }
             
-            // Risolve la chiave esatta (+50, lettere B/C/P ecc.)
             let chiaveTrovata = trovaChiaveEsatta(dbCorrente, codiceBase, dateStr); 
             let dettagli = dbCorrente[chiaveTrovata];
 
@@ -422,9 +440,11 @@
                 if(dettagli.luogoInizio) document.getElementById('adLuogoInizio').value = dettagli.luogoInizio;
                 if(dettagli.luogoFine) document.getElementById('adLuogoFine').value = dettagli.luogoFine;
                 
-                // Salva le chiavi segrete per l'immagine
                 document.getElementById('adChiaveEsatta').value = chiaveTrovata;
                 document.getElementById('adDataAttivaDb').value = dataAttiva;
+            } else {
+                document.getElementById('adChiaveEsatta').value = "";
+                document.getElementById('adDataAttivaDb').value = "";
             }
         };
 
@@ -449,7 +469,6 @@
                 payload.luogo_inizio = document.getElementById('adLuogoInizio').value;
                 payload.luogo_fine = document.getElementById('adLuogoFine').value;
                 
-                // Dati Immagine
                 payload.chiave_esatta = document.getElementById('adChiaveEsatta').value;
                 payload.data_attiva_db = document.getElementById('adDataAttivaDb').value;
             } else {
@@ -463,7 +482,7 @@
                 payload.restituzione = res;
             }
 
-            btn.innerText = "Pubblicazione...";
+            btn.innerText = "⏳ Pubblicazione...";
             try {
                 await addDoc(collection(db, "bacheca_turni"), payload);
                 document.getElementById('adModal').style.display = 'none';
@@ -478,14 +497,13 @@
             return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        // --- SISTEMA IMMAGINI / FALLBACK ---
+        // --- SISTEMA IMMAGINI / FALLBACK (COME NEL CALENDARIO) ---
         let currentImgPathFallback = "";
 
         window.apriImmagineTurno = function(codiceBase, chiave, dataDb, ini, fin, l_ini, l_fin) {
             let imgElement = document.getElementById('turnoImage');
             let ticketDiv = document.getElementById('ticketFallback');
             
-            // Popola il biglietto di riserva
             document.getElementById('tktCodice').innerText = codiceBase || "--";
             document.getElementById('tktInizio').innerText = ini || "--";
             document.getElementById('tktFine').innerText = fin || "--";
@@ -493,7 +511,7 @@
             document.getElementById('tktLuogoFine').innerText = l_fin || "--";
 
             if (chiave && dataDb) {
-                // Tenta di caricare l'immagine vera risolta dal DB!
+                // Genera la rotta del file JPG esattamente come in calendario.html
                 let primaryPath = `turni_${dataDb}/${chiave}.jpg`;
                 currentImgPathFallback = `turni_${dataDb}/${codiceBase}.jpg`;
                 
@@ -505,14 +523,12 @@
                         imgElement.src = currentImgPathFallback;
                         currentImgPathFallback = "";
                     } else {
-                        // Se fallisce anche il fallback, mostra il ticket testuale
                         imgElement.style.display = 'none';
                         ticketDiv.style.display = 'block';
                     }
                 };
                 imgElement.src = primaryPath;
             } else {
-                // Non abbiamo i dati per costruire il path
                 imgElement.style.display = 'none';
                 ticketDiv.style.display = 'block';
             }
@@ -539,7 +555,7 @@
             const today = new Date().toISOString().split('T')[0];
             const isMeSharedInRubrica = rubricaCondivisaSet.has(currentUser.uid);
 
-            containerRes.innerHTML = "<p>Caricamento...</p>";
+            containerRes.innerHTML = "<p style='color:#666;'>Caricamento annunci in corso...</p>";
             containerSug.innerHTML = "";
 
             try {
@@ -564,9 +580,7 @@
                     let isSuggested = false;
                     if (!isMe) {
                         isSuggested = myAnnunciAttivi.some(mio => {
-                            if(mio.data_scambio === a.data_scambio) {
-                                if(mio.cerco === a.cedo) return true;
-                            }
+                            if(mio.data_scambio === a.data_scambio && mio.cerco === a.cedo) return true;
                             return false;
                         });
                     }
@@ -617,7 +631,7 @@
                 divSugContainer.style.display = suggeriti > 0 ? 'block' : 'none';
                 if (annunci.length === 0) containerRes.innerHTML = "<p style='color:#666;'>Nessun annuncio in bacheca.</p>";
 
-            } catch(e) { containerRes.innerHTML = "<p>Errore bacheca</p>"; }
+            } catch(e) { containerRes.innerHTML = "<p>Errore caricamento bacheca: " + e.message + "</p>"; }
         }
 
         window.cancellaAnnuncio = async function(id) {
