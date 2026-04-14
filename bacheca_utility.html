@@ -12,7 +12,7 @@
         .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h2 { margin: 0; color: var(--primary); font-size: 24px; text-align: center; }
         
-        /* MENU LATERALE UNIFICATO */
+        /* MENU LATERALE */
         .hamburger-btn { background: none; border: none; font-size: 30px; color: var(--primary); cursor: pointer; padding: 0; width: 50px; text-align: left; }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 5999; }
         .sidebar { position: fixed; top: 0; left: -280px; width: 250px; height: 100%; background-color: white; box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 6000; transition: left 0.3s ease; display: flex; flex-direction: column; }
@@ -22,19 +22,17 @@
         .sidebar-link:active, .sidebar-link:hover { background-color: #f4f7f6; color: var(--primary); font-weight: bold; }
 
         .view-container { width: 100%; max-width: 400px; display: none; flex-direction: column; gap: 15px; text-align: center; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative; border-left: 5px solid var(--primary); }
         
         .msg-date { font-size: 11px; color: #888; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
-        .msg-text { font-size: 14px; line-height: 1.5; color: #444; white-space: pre-wrap; margin-bottom: 10px; }
-        .msg-link { display: inline-block; background: #e9ecef; color: var(--primary); padding: 8px 12px; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: bold; margin-top: 5px; word-break: break-all; }
-        .msg-file-btn { display: inline-flex; align-items: center; gap: 8px; background: #17a2b8; color: white; padding: 10px 15px; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: bold; margin-top: 10px; }
-        .msg-img-preview { max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd; }
+        .msg-text { font-size: 15px; line-height: 1.5; color: #444; white-space: pre-wrap; margin-bottom: 10px; }
+        .msg-link { display: inline-block; background: #e9ecef; color: var(--primary); padding: 10px 15px; border-radius: 8px; font-size: 14px; text-decoration: none; font-weight: bold; margin-top: 5px; word-break: break-all; width: box-sizing: border-box; }
 
         .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
         .btn-action:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-delete { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
         
-        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white; }
+        .input-field { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white; }
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 5000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 350px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; max-height: 90vh; overflow-y: auto;}
 
@@ -87,10 +85,7 @@
             <textarea id="msgTesto" class="input-field" rows="5" placeholder="Scrivi qui la comunicazione..."></textarea>
             
             <label style="font-size: 12px; font-weight: bold; color: #666;">Link Esterno (Opzionale):</label>
-            <input type="url" id="msgLink" class="input-field" placeholder="es. https://www.google.it">
-            
-            <label style="font-size: 12px; font-weight: bold; color: #666;">Allega File (Immagine o PDF):</label>
-            <input type="file" id="msgFile" class="input-field" accept="image/*,.pdf" style="padding: 9px;">
+            <input type="url" id="msgLink" class="input-field" placeholder="es. https://www.google.it o link Drive">
             
             <button id="btn-pubblica" class="btn-action" onclick="pubblicaMessaggio()">Pubblica Avviso</button>
         </div>
@@ -99,22 +94,19 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+        // Rimosso import dello Storage per evitare blocchi
         import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-        // IMPORT AGGIORNATO PER uploadBytesResumable
-        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-storage.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4", 
             authDomain: "utility-haze.firebaseapp.com", 
             projectId: "utility-haze", 
-            storageBucket: "utility-haze.firebasestorage.app", 
             messagingSenderId: "686237947418", 
             appId: "1:686237947418:web:f03ba19ab8fff43110a3a3" 
         };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
@@ -149,28 +141,18 @@
                         const d = new Date(m.timestamp);
                         const dataFormattata = d.toLocaleDateString('it-IT') + " alle " + d.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
                         
-                        let allegatoHTML = "";
-                        if (m.file_url) {
-                            if (m.file_type && m.file_type.startsWith("image/")) {
-                                allegatoHTML = `<a href="${m.file_url}" target="_blank"><img src="${m.file_url}" class="msg-img-preview"></a>`;
-                            } else {
-                                allegatoHTML = `<a href="${m.file_url}" target="_blank" class="msg-file-btn">📄 Apri / Scarica File</a>`;
-                            }
-                        }
-
                         let linkHTML = "";
                         if (m.link) {
-                            linkHTML = `<br><a href="${m.link}" target="_blank" class="msg-link">🔗 Apri Link Esterno</a>`;
+                            linkHTML = `<a href="${m.link}" target="_blank" class="msg-link">🔗 Apri Link Esterno</a>`;
                         }
 
-                        let adminBtn = isAdmin ? `<button class="btn-delete" onclick="eliminaMessaggio('${m.id}', '${m.file_path || ''}')">Elimina</button>` : '';
+                        let adminBtn = isAdmin ? `<button class="btn-delete" onclick="eliminaMessaggio('${m.id}')">Elimina</button>` : '';
 
                         container.innerHTML += `
                             <div class="card">
                                 ${adminBtn}
                                 <div class="msg-date">📅 ${dataFormattata}</div>
                                 <div class="msg-text">${m.testo}</div>
-                                ${allegatoHTML}
                                 ${linkHTML}
                             </div>
                         `;
@@ -184,84 +166,41 @@
         window.apriModaleNuovo = () => {
             document.getElementById('msgTesto').value = "";
             document.getElementById('msgLink').value = "";
-            document.getElementById('msgFile').value = "";
             document.getElementById('modal-nuovo').style.display = 'flex';
         };
 
-        // FUNZIONE AGGIORNATA CON CARICAMENTO A BLOCCHI E PERCENTUALE
         window.pubblicaMessaggio = async () => {
             const testo = document.getElementById('msgTesto').value.trim();
             const link = document.getElementById('msgLink').value.trim();
-            const fileInput = document.getElementById('msgFile').files[0];
             const btn = document.getElementById('btn-pubblica');
 
-            if (!testo && !fileInput) return alert("Inserisci un testo o un file.");
+            if (!testo) return alert("Inserisci il testo del messaggio.");
 
-            btn.innerText = "⏳ Preparazione...";
+            btn.innerText = "⏳ Pubblicazione...";
             btn.disabled = true;
 
             try {
-                let fileUrl = null;
-                let fileType = null;
-                let filePath = null;
-
-                // FASE 1: Caricamento File con Percentuale
-                if (fileInput) {
-                    filePath = `bacheca_utility/${Date.now()}_${fileInput.name}`;
-                    const storageRef = ref(storage, filePath);
-                    
-                    const uploadTask = uploadBytesResumable(storageRef, fileInput);
-
-                    // Aspettiamo che l'upload finisca mostrando il progresso
-                    await new Promise((resolve, reject) => {
-                        uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                btn.innerText = "⏳ Caricamento: " + Math.round(progress) + "%";
-                            }, 
-                            (error) => reject(error), 
-                            async () => {
-                                fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                                fileType = fileInput.type;
-                                resolve();
-                            }
-                        );
-                    });
-                }
-
-                // FASE 2: Salvataggio nel Database
-                btn.innerText = "⏳ Salvataggio in bacheca...";
-
                 await addDoc(collection(db, "bacheca_utility"), {
                     testo: testo,
                     link: link,
-                    file_url: fileUrl,
-                    file_type: fileType,
-                    file_path: filePath,
                     timestamp: Date.now()
                 });
 
                 document.getElementById('modal-nuovo').style.display = 'none';
                 btn.innerText = "Pubblica Avviso";
                 btn.disabled = false;
-                document.getElementById('msgFile').value = ""; // Svuota il file
                 caricaBacheca(); 
 
             } catch (error) {
-                console.error("Errore Dettagliato:", error);
                 alert("❌ Errore durante la pubblicazione: " + error.message);
                 btn.innerText = "Pubblica Avviso";
                 btn.disabled = false;
             }
         };
 
-        window.eliminaMessaggio = async (id, filePath) => {
+        window.eliminaMessaggio = async (id) => {
             if (!confirm("Sei sicuro di voler eliminare questo avviso?")) return;
             try {
-                if (filePath) {
-                    const fileRef = ref(storage, filePath);
-                    await deleteObject(fileRef).catch(e => console.log("File non trovato o già eliminato"));
-                }
                 await deleteDoc(doc(db, "bacheca_utility", id));
                 caricaBacheca();
             } catch (e) { alert("Errore durante l'eliminazione."); }
