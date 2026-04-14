@@ -21,4 +21,3 @@ self.addEventListener('fetch', (event) => {
     // Lascia passare tutte le altre richieste normalmente alla rete
     event.respondWith(fetch(event.request));
 });
- 
