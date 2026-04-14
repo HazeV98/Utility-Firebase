@@ -27,7 +27,7 @@
         
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative; }
         .card-suggested { background: #fffff8; border: 2px solid var(--warning); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; margin-bottom: 15px; position: relative;}
-        .card-suggested::before { content: "✨ MATCH"; position: absolute; top: -10px; right: 15px; background: var(--warning); color: #fff; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
+        .card-suggested::before { content: "✨ MATCH PERFETTO"; position: absolute; top: -10px; right: 15px; background: var(--warning); color: #fff; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
 
         .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
         .btn-action:active { opacity: 0.8; }
@@ -264,6 +264,12 @@
             }
         };
 
+        // Ritorna la data di oggi formattata locale senza i problemi del fuso orario UTC
+        function getOggiLocale() {
+            const d = new Date();
+            return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+        }
+
         // --- MOTORE LOGICA DB COME IN CALENDARIO.HTML ---
         const LISTA_FILE_INFO = ["info_turni_2026-03-02.json", "info_turni_2026-03-28.json"];
         let localDbCache = {};
@@ -453,7 +459,8 @@
 
                 document.getElementById('filtroMansione').value = userDataPrivate.mansione || "Tutte";
                 
-                const today = new Date().toISOString().split('T')[0];
+                const today = getOggiLocale(); // Evita i bug di fuso orario!
+                
                 let qCleanup = isAdmin ? collection(db, "bacheca_turni") : query(collection(db, "bacheca_turni"), where("uid", "==", currentUser.uid));
                 const adsSnap = await getDocs(qCleanup);
                 myAnnunciAttivi = [];
@@ -515,7 +522,7 @@
             document.getElementById('adModal').style.display = 'flex';
             switchAdTab('turno');
             
-            let todayStr = new Date().toISOString().split('T')[0];
+            let todayStr = getOggiLocale();
             document.getElementById('adDataTurno').value = todayStr;
             
             svuotaCampiTurno();
@@ -544,7 +551,7 @@
 
         window.verificaTurno = function() {
             let dateStr = document.getElementById('adDataTurno').value;
-            if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
+            if(!dateStr) dateStr = getOggiLocale();
             
             caricaDbCorrenteSincrono(dateStr); // Cerca sincrono nella cache
 
@@ -693,7 +700,7 @@
             
             const fMan = document.getElementById('filtroMansione').value;
             const fData = document.getElementById('filtroData').value;
-            const today = new Date().toISOString().split('T')[0];
+            const today = getOggiLocale(); // Risolve il bug fuso orario visivo
 
             containerRes.innerHTML = "<p style='color:#666;'>Caricamento annunci in corso...</p>";
             containerSug.innerHTML = "";
@@ -715,6 +722,7 @@
 
                 annunci.forEach(a => {
                     const isMe = a.uid === currentUser.uid;
+                    const canDelete = isMe || isAdmin; // Logica ADMIN integrata
                     
                     let isSuggested = false;
                     if (!isMe) {
@@ -774,6 +782,15 @@
                         `;
                     }
 
+                    // Creazione sequenziale dei bottoni laterali in base ai permessi
+                    let actionsHTML = "";
+                    if (showWa) {
+                        actionsHTML += `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto in bacheca il tuo annuncio per il ${dateFormatted}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent;">${svgWa}</a>`;
+                    }
+                    if (canDelete) {
+                        actionsHTML += `<button onclick="cancellaAnnuncio('${a.id}')" class="action-icon" style="background:var(--danger); color:white; border:none; padding:8px; width:auto; height:auto; font-size: 16px;">🗑️</button>`;
+                    }
+
                     const html = `
                         <div class="${itemClass}">
                             <div style="display:flex; justify-content: space-between;">
@@ -783,8 +800,7 @@
                                     ${corpoHTML}
                                 </div>
                                 <div class="contact-actions" style="flex-direction:column; justify-content:center; padding-left: 10px;">
-                                    ${isMe ? `<button onclick="cancellaAnnuncio('${a.id}')" class="action-icon" style="background:var(--danger); color:white; border:none; padding:8px; width:auto; height:auto;">🗑️</button>` 
-                                           : (showWa ? `<a href="https://wa.me/39${numClean}?text=Ciao! Ho visto in bacheca il tuo annuncio per il ${dateFormatted}. Ne parliamo?" target="_blank" class="action-icon" style="background:transparent;">${svgWa}</a>` : '')}
+                                    ${actionsHTML}
                                 </div>
                             </div>
                         </div>
