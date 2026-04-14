@@ -69,11 +69,20 @@
         </div>
         <div class="header-side right">
             <button id="install-btn">Installa</button>
+            <div id="icona-bacheca" style="position: relative; cursor: pointer; margin-left: 15px;" onclick="window.location.href='bacheca_utility.html'">
+                <span style="font-size: 26px;">📢</span>
+                <div id="badge-messaggi" style="display: none; position: absolute; top: -5px; right: -8px; background: var(--danger); color: white; border-radius: 50%; font-size: 11px; font-weight: bold; width: 18px; height: 18px; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">0</div>
+            </div>
         </div>
+    </div>
+
+    <div id="banner-nuovo-messaggio" style="display: none; background: #ffc107; color: #856404; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 20px; width: 100%; max-width: 400px; cursor: pointer; border: 1px solid #ffeeba; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="window.location.href='bacheca_utility.html'">
+        🔔 Nuovo avviso in Bacheca Utility! Clicca per leggere.
     </div>
 
     <div class="menu-grid">
         <a href="calendario.html?oggi=true" class="menu-btn btn-oggi">Turno di Oggi</a>
+        <a href="bacheca_utility.html" class="menu-btn" style="background-color: #17a2b8;">📢 Bacheca Avvisi</a>
         <a href="calendario.html" class="menu-btn">📅 Calendario</a>
         <a href="dati_calendario.html" class="menu-btn">📊 Statistiche</a>
         <a href="turni.html" class="menu-btn">🔄 Turni</a>
@@ -173,7 +182,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('dev_mode_active') === 'true') {
                 document.getElementById('secret-btn').style.display = 'block';
-                document.getElementById('adminBadge').style.display = 'block'; // Mostra il badge
+                document.getElementById('adminBadge').style.display = 'block'; 
             }
             if (localStorage.getItem('generatore_sbloccato') === 'true') document.getElementById('generatore-btn').style.display = 'block';
             const appDataStr = localStorage.getItem('myTurniApp');
@@ -201,7 +210,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4",
@@ -251,6 +260,32 @@
             }
         };
 
+        // FUNZIONE CONTROLLO NOTIFICHE BACHECA
+        window.controllaNotificheBacheca = async () => {
+            try {
+                const ultimoAccesso = parseInt(localStorage.getItem('ultimo_accesso_bacheca')) || 0;
+                const snap = await getDocs(collection(db, "bacheca_utility"));
+                
+                let messaggiNonLetti = 0;
+                snap.forEach(d => {
+                    const m = d.data();
+                    if (m.timestamp > ultimoAccesso) {
+                        messaggiNonLetti++;
+                    }
+                });
+
+                if (messaggiNonLetti > 0) {
+                    const badge = document.getElementById('badge-messaggi');
+                    badge.innerText = messaggiNonLetti;
+                    badge.style.display = 'flex';
+                    document.getElementById('banner-nuovo-messaggio').style.display = 'block';
+                }
+            } catch (e) { console.error("Errore controllo notifiche", e); }
+        };
+
+        // Caricamento notifiche all'avvio
+        window.controllaNotificheBacheca();
+
         onAuthStateChanged(auth, async (user) => {
             const btnLogin = document.getElementById('btnOpenLogin');
             const btnProfile = document.getElementById('btnOpenProfile');
@@ -264,6 +299,9 @@
                 statusText.style.display = 'block';
                 statusText.innerHTML = `☁️ Online`;
                 profileEmail.value = user.email;
+
+                // Controlla di nuovo le notifiche per sicurezza quando l'utente è loggato
+                window.controllaNotificheBacheca();
 
                 try {
                     const docRef = doc(db, "utenti", user.uid);
