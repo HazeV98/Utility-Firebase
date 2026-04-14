@@ -12,6 +12,13 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Lascia passare tutte le richieste normalmente alla rete
+    // IMPORTANTE: Ignora le richieste verso Firebase per non bloccare upload e database
+    if (event.request.url.includes('firestore.googleapis.com') || 
+        event.request.url.includes('firebasestorage.googleapis.com')) {
+        return; 
+    }
+
+    // Lascia passare tutte le altre richieste normalmente alla rete
     event.respondWith(fetch(event.request));
 });
+ 
