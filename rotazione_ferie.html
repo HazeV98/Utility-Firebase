@@ -49,7 +49,7 @@
         .badge-estivo { background: #ffeeba; color: #856404; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
         .badge-invernale { background: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
         .badge-scambiato { background: #e2e3e5; color: #383d41; padding: 2px 6px; border-radius: 4px; font-size: 9px; margin-left: 5px; vertical-align: middle; }
-        .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); }
+        .action-icon { background: #e9ecef; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; color: var(--text-color); cursor: pointer;}
     </style>
 </head>
 <body>
@@ -408,7 +408,7 @@
                     <div style="display:flex; justify-content: space-between;">
                         <div>
                             <div style="font-weight:bold; color:var(--primary)">${u.cognome} ${u.nome}${u.uid===currentUser.uid?' (Tu)':''}</div>
-                            <div style="font-size:11px; color:#666">${u.mansione} | Mat: ${u.matricola}</div>
+                            <div style="font-size:11px; color:#666">${u.mansione} | Mat: ${u.matricola || 'N/D'}</div>
                             <span class="badge-estivo">☀️ ${ec}${hasExchange && ec===u.est_attuale ? '<span class="badge-scambiato">SCAMBIATO</span>' : ''}</span><br>
                             <span class="badge-invernale">❄️ ${ic}${hasExchange && ic===u.inv_attuale ? '<span class="badge-scambiato">SCAMBIATO</span>' : ''}</span>
                         </div>
@@ -449,33 +449,68 @@
             const t = document.getElementById('adTipoFerie').value; const ct = document.getElementById('adCercoTipo').value;
             const cv = ct==='mesi' ? Array.from(document.querySelectorAll('#checkboxes-mesi input:checked')).map(b => b.value) : [document.getElementById('adPeriodoCercato').value];
             if(!document.getElementById('adPeriodoOfferto').value || cv.length === 0) return alert("Completa i dati!");
-            await addDoc(collection(db, "bacheca_ferie"), { uid: currentUser.uid, nome: myFerieData.nome, cognome: myFerieData.cognome, telefono: myFerieData.telefono, mansione: myFerieData.mansione, timestamp: Date.now(), tipo_ferie: t, periodo_offerto: document.getElementById('adPeriodoOfferto').value, cerco_tipo: ct, cerco_valori: cv });
+            
+            await addDoc(collection(db, "bacheca_ferie"), { 
+                uid: currentUser.uid, 
+                nome: myFerieData.nome, 
+                cognome: myFerieData.cognome, 
+                telefono: myFerieData.telefono, 
+                mansione: myFerieData.mansione, 
+                matricola: myFerieData.matricola, // INSERITO SALVATAGGIO MATRICOLA QUI
+                timestamp: Date.now(), 
+                tipo_ferie: t, 
+                periodo_offerto: document.getElementById('adPeriodoOfferto').value, 
+                cerco_tipo: ct, 
+                cerco_valori: cv 
+            });
             location.reload();
         };
 
-        async function caricaBacheca() {
+        window.caricaBacheca = async function() {
             const sugC = document.getElementById('suggeriti-bacheca'); const resC = document.getElementById('lista-annunci');
             const fMan = document.getElementById('filtroMansioneBacheca').value;
             let q = fMan === "Tutte" ? collection(db, "bacheca_ferie") : query(collection(db, "bacheca_ferie"), where("mansione", "==", fMan));
             const ads = await getDocs(q);
             sugC.innerHTML = ""; resC.innerHTML = ""; let sCount = 0;
+            
             ads.forEach(d => {
-                const a = d.data(); const match = a.uid !== currentUser.uid && myAnnunciAttivi.some(m => m.tipo_ferie === a.tipo_ferie && (m.cerco_tipo === 'periodo' ? m.cerco_valori[0] === a.periodo_offerto : m.cerco_valori.some(mes => a.periodo_offerto.toLowerCase().includes(mes.toLowerCase()))));
+                const a = d.data(); 
+                const isMe = a.uid === currentUser.uid;
+                const canDelete = isMe || isAdmin; // CONTROLLO AMMINISTRATORE
+                
+                const match = !isMe && myAnnunciAttivi.some(m => m.tipo_ferie === a.tipo_ferie && (m.cerco_tipo === 'periodo' ? m.cerco_valori[0] === a.periodo_offerto : m.cerco_valori.some(mes => a.periodo_offerto.toLowerCase().includes(mes.toLowerCase()))));
+                
+                let actionsHTML = "";
+                if (!isMe && a.telefono) {
+                    actionsHTML += `<a href="https://wa.me/39${a.telefono.replace(/\s+/g,'')}" target="_blank" class="action-icon">${svgWa}</a>`;
+                }
+                if (canDelete) {
+                    actionsHTML += `<button onclick="cancellaAnnuncioFerie('${d.id}')" class="action-icon" style="background:var(--danger); color:white; border:none; padding:8px; width:auto; height:auto; font-size:16px; margin-top: 5px;">🗑️</button>`;
+                }
+
                 const h = `<div class="${match?'card-suggested':'card'}" style="border-left:4px solid ${a.tipo_ferie==='estive'?'#ffc107':'#17a2b8'}">
                     <div style="display:flex; justify-content: space-between;">
                         <div>
                             <div style="font-weight:bold">${a.cognome} ${a.nome}</div>
-                            <div style="font-size:11px; color:#666">${a.mansione} | Tel: ${a.telefono}</div>
+                            <div style="font-size:11px; color:#666">${a.mansione} | Mat: ${a.matricola || 'N/D'} | Tel: ${a.telefono}</div>
                             <span class="${a.tipo_ferie==='estive'?'badge-estivo':'badge-invernale'}">CEDE: ${a.periodo_offerto}</span><br>
                             <span class="badge-invernale" style="background:#eee; color:#333">CERCA: ${a.cerco_valori.join(', ')}</span>
                         </div>
-                        <div class="contact-actions">${a.uid===currentUser.uid?`<button onclick="deleteDoc(doc(db,'bacheca_ferie','${d.id}')).then(()=>location.reload())" style="background:var(--danger); color:white; border:none; border-radius:4px; padding:5px">🗑️</button>`:`<a href="https://wa.me/39${a.telefono.replace(/\s+/g,'')}" target="_blank" class="action-icon">${svgWa}</a>`}</div>
+                        <div class="contact-actions" style="flex-direction:column; justify-content:center; padding-left: 10px;">
+                            ${actionsHTML}
+                        </div>
                     </div>
                 </div>`;
                 if(match) { sCount++; sugC.innerHTML += h; } else resC.innerHTML += h;
             });
             document.getElementById('suggeriti-bacheca-container').style.display = sCount>0?'block':'none';
         }
+
+        window.cancellaAnnuncioFerie = async function(id) {
+            if(!confirm("Vuoi cancellare questo annuncio?")) return;
+            await deleteDoc(doc(db, "bacheca_ferie", id));
+            location.reload();
+        };
     </script>
 </body>
 </html>
