@@ -31,6 +31,7 @@
         .msg-img-preview { max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd; }
 
         .btn-action { background-color: var(--success); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
+        .btn-action:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-delete { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
         
         .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e9ecef; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; background-color: white; }
@@ -99,7 +100,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-storage.js";
+        // IMPORT AGGIORNATO PER uploadBytesResumable
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-storage.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyDpamGt2bsT6TJMwnerIUTSfCVFBTJtos4", 
@@ -141,7 +143,6 @@
                 if (msgs.length === 0) {
                     container.innerHTML = `<div class="status-message">Nessun avviso in bacheca.</div>`;
                 } else {
-                    // Aggiorniamo il "Visto" per far sparire la notifica sulla Home
                     localStorage.setItem('ultimo_accesso_bacheca', Date.now());
 
                     msgs.forEach(m => {
@@ -187,6 +188,7 @@
             document.getElementById('modal-nuovo').style.display = 'flex';
         };
 
+        // FUNZIONE AGGIORNATA CON CARICAMENTO A BLOCCHI E PERCENTUALE
         window.pubblicaMessaggio = async () => {
             const testo = document.getElementById('msgTesto').value.trim();
             const link = document.getElementById('msgLink').value.trim();
@@ -195,19 +197,40 @@
 
             if (!testo && !fileInput) return alert("Inserisci un testo o un file.");
 
-            btn.innerText = "⏳ Pubblicazione...";
+            btn.innerText = "⏳ Preparazione...";
+            btn.disabled = true;
+
             try {
                 let fileUrl = null;
                 let fileType = null;
                 let filePath = null;
 
+                // FASE 1: Caricamento File con Percentuale
                 if (fileInput) {
                     filePath = `bacheca_utility/${Date.now()}_${fileInput.name}`;
                     const storageRef = ref(storage, filePath);
-                    await uploadBytes(storageRef, fileInput);
-                    fileUrl = await getDownloadURL(storageRef);
-                    fileType = fileInput.type;
+                    
+                    const uploadTask = uploadBytesResumable(storageRef, fileInput);
+
+                    // Aspettiamo che l'upload finisca mostrando il progresso
+                    await new Promise((resolve, reject) => {
+                        uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                btn.innerText = "⏳ Caricamento: " + Math.round(progress) + "%";
+                            }, 
+                            (error) => reject(error), 
+                            async () => {
+                                fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                                fileType = fileInput.type;
+                                resolve();
+                            }
+                        );
+                    });
                 }
+
+                // FASE 2: Salvataggio nel Database
+                btn.innerText = "⏳ Salvataggio in bacheca...";
 
                 await addDoc(collection(db, "bacheca_utility"), {
                     testo: testo,
@@ -220,23 +243,25 @@
 
                 document.getElementById('modal-nuovo').style.display = 'none';
                 btn.innerText = "Pubblica Avviso";
-                caricaBacheca(); // Ricarica la lista
+                btn.disabled = false;
+                document.getElementById('msgFile').value = ""; // Svuota il file
+                caricaBacheca(); 
 
             } catch (error) {
-                alert("Errore: " + error.message);
+                console.error("Errore Dettagliato:", error);
+                alert("❌ Errore durante la pubblicazione: " + error.message);
                 btn.innerText = "Pubblica Avviso";
+                btn.disabled = false;
             }
         };
 
         window.eliminaMessaggio = async (id, filePath) => {
             if (!confirm("Sei sicuro di voler eliminare questo avviso?")) return;
             try {
-                // Se c'è un file allegato, eliminalo prima dallo Storage
                 if (filePath) {
                     const fileRef = ref(storage, filePath);
                     await deleteObject(fileRef).catch(e => console.log("File non trovato o già eliminato"));
                 }
-                // Elimina il documento
                 await deleteDoc(doc(db, "bacheca_utility", id));
                 caricaBacheca();
             } catch (e) { alert("Errore durante l'eliminazione."); }
