@@ -117,6 +117,7 @@
             
             <input type="text" id="regNome" class="input-field" placeholder="Nome">
             <input type="text" id="regCognome" class="input-field" placeholder="Cognome">
+            <input type="text" id="regSoprannome" class="input-field" placeholder="Soprannome (Facoltativo)">
             
             <select id="regMansione" class="input-field">
                 <option value="">-- Seleziona Mansione --</option>
@@ -215,10 +216,11 @@
         window.avviaCondivisione = function() {
             const haTuttiIDati = userDataPrivate.nome && userDataPrivate.cognome && userDataPrivate.mansione && userDataPrivate.telefono;
             if (haTuttiIDati) {
-                salvaCondivisione(userDataPrivate.nome, userDataPrivate.cognome, userDataPrivate.mansione, userDataPrivate.matricola, userDataPrivate.telefono);
+                salvaCondivisione(userDataPrivate.nome, userDataPrivate.cognome, userDataPrivate.mansione, userDataPrivate.matricola, userDataPrivate.telefono, userDataPrivate.soprannome);
             } else {
                 document.getElementById('regNome').value = userDataPrivate.nome || "";
                 document.getElementById('regCognome').value = userDataPrivate.cognome || "";
+                document.getElementById('regSoprannome').value = userDataPrivate.soprannome || "";
                 document.getElementById('regMansione').value = userDataPrivate.mansione || "";
                 document.getElementById('regMatricola').value = userDataPrivate.matricola || "";
                 document.getElementById('regTelefono').value = userDataPrivate.telefono || "";
@@ -229,6 +231,7 @@
         window.salvaECondividi = async function() {
             const n = document.getElementById('regNome').value.trim();
             const c = document.getElementById('regCognome').value.trim();
+            const s = document.getElementById('regSoprannome').value.trim();
             const ms = document.getElementById('regMansione').value;
             const m = document.getElementById('regMatricola').value.trim();
             const t = document.getElementById('regTelefono').value.trim();
@@ -236,13 +239,13 @@
             if (!n || !c || !ms || !t) return alert("Dati obbligatori mancanti.");
             
             document.getElementById('btnSalva').innerText = "Salvataggio...";
-            try { await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, mansione: ms, matricola: m, telefono: t }, { merge: true }); } catch(e){}
-            salvaCondivisione(n, c, ms, m, t);
+            try { await setDoc(doc(db, "utenti", currentUser.uid), { nome: n, cognome: c, soprannome: s, mansione: ms, matricola: m, telefono: t }, { merge: true }); } catch(e){}
+            salvaCondivisione(n, c, ms, m, t, s);
         };
 
-        async function salvaCondivisione(n, c, ms, m, t) {
+        async function salvaCondivisione(n, c, ms, m, t, s) {
             try {
-                await setDoc(doc(db, "rubrica", currentUser.uid), { nome: n, cognome: c, mansione: ms, matricola: m, telefono: t });
+                await setDoc(doc(db, "rubrica", currentUser.uid), { nome: n, cognome: c, soprannome: s || "", mansione: ms, matricola: m, telefono: t });
                 document.getElementById('profileModal').style.display = 'none';
                 nascondiTutto();
                 document.getElementById('view-directory').style.display = 'flex';
@@ -289,13 +292,14 @@
                 const item = document.createElement('div'); item.className = "contact-item";
                 const nomeCap = c.nome.charAt(0).toUpperCase() + c.nome.slice(1).toLowerCase();
                 const cognomeCap = c.cognome.charAt(0).toUpperCase() + c.cognome.slice(1).toLowerCase();
+                const soprannomeLabel = c.soprannome ? ` <span style="font-style:italic; font-size:14px; color:#888;">"${c.soprannome}"</span>` : "";
                 const numDisplay = c.telefono;
                 const numClean = c.telefono.replace(/\s+/g, '');
                 const waIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366"><path d="M12.031 0C5.385 0 .018 5.366.018 12.012c0 2.125.553 4.197 1.603 6.012L.05 24l6.115-1.604c1.745.965 3.738 1.474 5.866 1.474 6.646 0 12.013-5.366 12.013-12.012S18.677 0 12.031 0zm-.018 21.84c-1.796 0-3.553-.483-5.093-1.396l-.365-.216-3.791.994.996-3.697-.238-.377a9.98 9.98 0 0 1-1.528-5.337C1.994 6.452 6.444 2.016 12.013 2.016c2.705 0 5.247 1.053 7.158 2.966 1.91 1.912 2.964 4.456 2.964 7.165 0 5.564-4.45 10.003-10.012 10.003l-.11-.31zm5.503-7.534c-.302-.151-1.785-.881-2.062-.981-.277-.101-.479-.151-.68.151-.202.302-.781.981-.957 1.182-.176.202-.353.226-.655.075-.302-.151-1.275-.47-2.428-1.503-.896-.803-1.501-1.794-1.677-2.096-.176-.302-.019-.465.132-.616.136-.136.302-.353.453-.53.151-.176.202-.302.302-.504.101-.202.05-.378-.025-.53-.075-.151-.68-1.64-.932-2.245-.245-.59-.495-.51-.68-.52-.176-.01-.378-.01-.58-.01-.202 0-.53.076-.807.378-.277.302-1.058 1.034-1.058 2.52 0 1.487 1.083 2.924 1.234 3.125.151.202 2.132 3.255 5.163 4.561 2.222.956 2.87.805 3.373.68.591-.148 1.785-.73 2.037-1.435.252-.705.252-1.31.176-1.435-.075-.126-.277-.202-.58-.353z"/></svg>`;
 
                 item.innerHTML = `
                     <div class="contact-info">
-                        <div class="contact-name">${cognomeCap} ${nomeCap}</div>
+                        <div class="contact-name">${cognomeCap} ${nomeCap}${soprannomeLabel}</div>
                         <div class="contact-detail">${c.mansione || 'N/D'} | Mat: ${c.matricola || 'N/D'}</div>
                         <div class="contact-phone">${numDisplay}</div>
                     </div>
@@ -312,7 +316,7 @@
             const t = document.getElementById('search-bar').value.toLowerCase().trim();
             if (!t) return disegnaContatti(listaContatti);
             const filtrati = listaContatti.filter(c => {
-                const full = (c.nome + " " + c.cognome + " " + (c.matricola||"") + " " + (c.telefono||"") + " " + (c.mansione||"")).toLowerCase();
+                const full = (c.nome + " " + c.cognome + " " + (c.soprannome||"") + " " + (c.matricola||"") + " " + (c.telefono||"") + " " + (c.mansione||"")).toLowerCase();
                 return full.includes(t);
             });
             disegnaContatti(filtrati);
