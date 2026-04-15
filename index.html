@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utility</title>
 
     <script>
@@ -160,7 +160,7 @@
                 <button class="btn-modal" style="background: #32325d; color: white; margin:0;" onclick="loginEmail()">Accedi</button>
                 <button class="btn-modal" style="background: #11cdef; color: white; margin:0;" onclick="registraEmail()">Registrati</button>
             </div>
-            <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 15px 0;">
+            <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 20px 0;">
             <button class="btn-modal" style="background: #ea4335; color: white; margin:0;" onclick="loginGoogle()">☁️ Accedi con Google</button>
         </div>
     </div>
@@ -249,9 +249,20 @@
             const matricola = document.getElementById('profileMatricola').value.trim();
             const telefono = document.getElementById('profileTelefono').value.trim();
 
+            const profileData = { nome: nome, cognome: cognome, soprannome: soprannome, mansione: mansione, matricola: matricola, telefono: telefono };
+
             try {
+                // 1. Aggiorna collezione Utenti (Dati privati)
                 const docRef = doc(db, "utenti", user.uid);
-                await setDoc(docRef, { nome: nome, cognome: cognome, soprannome: soprannome, mansione: mansione, matricola: matricola, telefono: telefono }, { merge: true });
+                await setDoc(docRef, profileData, { merge: true });
+
+                // 2. Controllo se l'utente è presente in Rubrica (Dati pubblici) e lo aggiorno
+                const rubricaRef = doc(db, "rubrica", user.uid);
+                const rubricaSnap = await getDoc(rubricaRef);
+                if (rubricaSnap.exists()) {
+                    await setDoc(rubricaRef, profileData, { merge: true });
+                }
+
                 alert("✅ Profilo salvato correttamente!");
                 document.getElementById('profileModal').style.display = 'none';
             } catch (e) {
