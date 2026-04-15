@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Utility</title>
 
     <script>
@@ -120,6 +120,9 @@
             
             <label style="font-size: 12px; color: #666; font-weight: bold;">Cognome:</label>
             <input type="text" id="profileCognome" class="input-field" placeholder="Inserisci cognome">
+            
+            <label style="font-size: 12px; color: #666; font-weight: bold;">Soprannome:</label>
+            <input type="text" id="profileSoprannome" class="input-field" placeholder="Soprannome (Facoltativo)">
             
             <label style="font-size: 12px; color: #666; font-weight: bold;">Mansione:</label>
             <select id="profileMansione" class="input-field">
@@ -241,13 +244,14 @@
 
             const nome = document.getElementById('profileNome').value.trim();
             const cognome = document.getElementById('profileCognome').value.trim();
+            const soprannome = document.getElementById('profileSoprannome').value.trim();
             const mansione = document.getElementById('profileMansione').value;
             const matricola = document.getElementById('profileMatricola').value.trim();
             const telefono = document.getElementById('profileTelefono').value.trim();
 
             try {
                 const docRef = doc(db, "utenti", user.uid);
-                await setDoc(docRef, { nome: nome, cognome: cognome, mansione: mansione, matricola: matricola, telefono: telefono }, { merge: true });
+                await setDoc(docRef, { nome: nome, cognome: cognome, soprannome: soprannome, mansione: mansione, matricola: matricola, telefono: telefono }, { merge: true });
                 alert("✅ Profilo salvato correttamente!");
                 document.getElementById('profileModal').style.display = 'none';
             } catch (e) {
@@ -309,6 +313,7 @@
                         const data = docSnap.data();
                         document.getElementById('profileNome').value = data.nome || '';
                         document.getElementById('profileCognome').value = data.cognome || '';
+                        document.getElementById('profileSoprannome').value = data.soprannome || '';
                         document.getElementById('profileMansione').value = data.mansione || '';
                         document.getElementById('profileMatricola').value = data.matricola || '';
                         document.getElementById('profileTelefono').value = data.telefono || '';
