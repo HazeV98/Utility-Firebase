@@ -471,9 +471,10 @@
                 
                 adsSnap.forEach(d => {
                     const a = d.data();
-                    if(a.data_scambio >= today) {
+                    if(a.data_scambio > today) { // <-- MODIFICA: Solo i giorni strettamente maggiori di oggi
                         if (a.uid === currentUser.uid) myAnnunciAttivi.push(a);
                     } else {
+                        // Elimina anche gli annunci per la giornata odierna
                         deleteDoc(doc(db, "bacheca_turni", d.id)).catch(e => {});
                     }
                 });
@@ -717,7 +718,7 @@
                 let annunci = [];
                 snap.forEach(doc => {
                     const a = doc.data(); a.id = doc.id;
-                    if(a.data_scambio >= today) annunci.push(a);
+                    if(a.data_scambio > today) annunci.push(a); // <-- MODIFICA: Mostra solo i giorni strettamente maggiori di oggi
                 });
 
                 if(fData) annunci = annunci.filter(a => a.data_scambio === fData);
@@ -796,7 +797,6 @@
                     // Creazione sequenziale dei bottoni laterali in base ai permessi
                     let actionsHTML = "";
                     if (showWa) {
-                        // Rimosso testo pre-compilato come richiesto
                         actionsHTML += `<a href="https://wa.me/39${numClean}" target="_blank" class="action-icon" style="background:transparent;">${svgWa}</a>`;
                     }
                     if (canDelete) {
@@ -838,3 +838,4 @@
     </script>
 </body>
 </html>
+ 
