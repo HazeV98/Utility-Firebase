@@ -151,8 +151,12 @@
         <div class="modal-content" style="text-align: center;">
             <span style="position: absolute; right: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #525f7f;" onclick="document.getElementById('authModal').style.display='none'">&times;</span>
             <h3 style="margin-top: 5px; color: #32325d;">Backup Cloud</h3>
+            
             <input type="email" id="emailInput" placeholder="La tua email" class="input-field">
             <input type="password" id="passwordInput" placeholder="Password" class="input-field">
+            
+            <div id="authError" style="color: var(--danger); font-size: 13px; margin-bottom: 15px; font-weight: bold; display: none;"></div>
+
             <div style="text-align: right; margin-bottom: 15px;">
                 <a href="#" onclick="recuperaPassword(); return false;" style="font-size: 12px; color: #0056b3; font-weight: bold;">Password dimenticata?</a>
             </div>
@@ -228,10 +232,62 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        window.loginGoogle = () => signInWithPopup(auth, provider);
-        window.loginEmail = () => signInWithEmailAndPassword(auth, document.getElementById('emailInput').value, document.getElementById('passwordInput').value);
-        window.registraEmail = () => createUserWithEmailAndPassword(auth, document.getElementById('emailInput').value, document.getElementById('passwordInput').value);
-        window.recuperaPassword = () => sendPasswordResetEmail(auth, document.getElementById('emailInput').value).then(() => alert("Email inviata!"));
+        // GESTIONE ERRORI LOGIN/REGISTRAZIONE
+        function mostraErroreAuth(msg, isSuccess = false) {
+            const errDiv = document.getElementById('authError');
+            errDiv.innerText = msg;
+            errDiv.style.color = isSuccess ? "var(--success)" : "var(--danger)";
+            errDiv.style.display = 'block';
+        }
+
+        window.loginGoogle = async () => {
+            try { 
+                await signInWithPopup(auth, provider); 
+            } catch(error) { 
+                mostraErroreAuth("Errore durante l'accesso con Google."); 
+            }
+        };
+
+        window.loginEmail = async () => {
+            document.getElementById('authError').style.display = 'none';
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('emailInput').value, document.getElementById('passwordInput').value);
+            } catch (error) {
+                let msg = "Errore durante l'accesso.";
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = "Email o Password errata.";
+                else if (error.code === 'auth/invalid-email') msg = "Formato email non valido.";
+                mostraErroreAuth(msg);
+            }
+        };
+
+        window.registraEmail = async () => {
+            document.getElementById('authError').style.display = 'none';
+            try {
+                await createUserWithEmailAndPassword(auth, document.getElementById('emailInput').value, document.getElementById('passwordInput').value);
+            } catch (error) {
+                let msg = "Errore durante la registrazione.";
+                if (error.code === 'auth/email-already-in-use') msg = "Questa email è già registrata.";
+                else if (error.code === 'auth/weak-password') msg = "La password deve avere almeno 6 caratteri.";
+                else if (error.code === 'auth/invalid-email') msg = "Formato email non valido.";
+                mostraErroreAuth(msg);
+            }
+        };
+
+        window.recuperaPassword = async () => {
+            document.getElementById('authError').style.display = 'none';
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                mostraErroreAuth("Inserisci prima la tua email nel campo qui sopra.");
+                return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                mostraErroreAuth("Email di recupero inviata! Controlla la tua casella.", true);
+            } catch (error) {
+                mostraErroreAuth("Impossibile inviare l'email. Controlla l'indirizzo inserito.");
+            }
+        };
+
         window.logout = () => { signOut(auth); document.getElementById('profileModal').style.display='none'; };
 
         window.salvaProfilo = async () => {
@@ -308,6 +364,7 @@
 
             if (user) {
                 document.getElementById('authModal').style.display = 'none';
+                document.getElementById('authError').style.display = 'none'; // Resetta eventuali errori alla chiusura
                 btnLogin.style.display = 'none';
                 btnProfile.style.display = 'block';
                 statusText.style.display = 'block';
