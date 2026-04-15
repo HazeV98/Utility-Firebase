@@ -159,7 +159,6 @@
         let listaContatti = [];
         const isAdmin = localStorage.getItem('dev_mode_active') === 'true';
 
-        // Funzioni per l'apertura e la chiusura del menù laterale
         window.apriMenuLaterale = () => { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').style.display = 'block'; };
         window.chiudiMenuLaterale = () => { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').style.display = 'none'; };
 
@@ -203,6 +202,12 @@
                 const rubricaSnap = await getDoc(rubricaRef);
                 
                 if (rubricaSnap.exists()) {
+                    // AUTO-SYNC: Allinea istantaneamente i dati se mancano!
+                    const datiRub = rubricaSnap.data();
+                    if (userDataPrivate.soprannome !== undefined && datiRub.soprannome !== userDataPrivate.soprannome) {
+                        await setDoc(rubricaRef, { soprannome: userDataPrivate.soprannome }, { merge: true });
+                    }
+
                     nascondiTutto();
                     document.getElementById('view-directory').style.display = 'flex';
                     caricaRubricaGenerale();
