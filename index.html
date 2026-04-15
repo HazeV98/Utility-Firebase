@@ -6,6 +6,25 @@
     <title>Utility</title>
 
     <script>
+        // --- SISTEMA DI PULIZIA CACHE E AGGIORNAMENTO FORZATO ---
+        const APP_VERSION = "1.1"; // Cambia questo numero in futuro per forzare nuovi aggiornamenti
+        if (localStorage.getItem('app_version_cache') !== APP_VERSION) {
+            if ('caches' in window) {
+                caches.keys().then((names) => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then((registrations) => {
+                    registrations.forEach(registration => registration.unregister());
+                });
+            }
+            localStorage.setItem('app_version_cache', APP_VERSION);
+            window.location.reload(true);
+        }
+    </script>
+
+    <script>
         const urlParams = new URLSearchParams(window.location.search);
         const datiImportati = urlParams.get('dati');
         const codiceImportato = urlParams.get('codice');
@@ -232,7 +251,6 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // GESTIONE ERRORI LOGIN/REGISTRAZIONE
         function mostraErroreAuth(msg, isSuccess = false) {
             const errDiv = document.getElementById('authError');
             errDiv.innerText = msg;
@@ -308,11 +326,9 @@
             const profileData = { nome: nome, cognome: cognome, soprannome: soprannome, mansione: mansione, matricola: matricola, telefono: telefono };
 
             try {
-                // 1. Aggiorna collezione Utenti (Dati privati)
                 const docRef = doc(db, "utenti", user.uid);
                 await setDoc(docRef, profileData, { merge: true });
 
-                // 2. Controllo se l'utente è presente in Rubrica (Dati pubblici) e lo aggiorno
                 const rubricaRef = doc(db, "rubrica", user.uid);
                 const rubricaSnap = await getDoc(rubricaRef);
                 if (rubricaSnap.exists()) {
@@ -330,7 +346,6 @@
             }
         };
 
-        // FUNZIONE CONTROLLO NOTIFICHE BACHECA
         window.controllaNotificheBacheca = async () => {
             try {
                 const ultimoAccesso = parseInt(localStorage.getItem('ultimo_accesso_bacheca')) || 0;
@@ -353,7 +368,6 @@
             } catch (e) { console.error("Errore controllo notifiche", e); }
         };
 
-        // Caricamento notifiche all'avvio
         window.controllaNotificheBacheca();
 
         onAuthStateChanged(auth, async (user) => {
@@ -364,14 +378,13 @@
 
             if (user) {
                 document.getElementById('authModal').style.display = 'none';
-                document.getElementById('authError').style.display = 'none'; // Resetta eventuali errori alla chiusura
+                document.getElementById('authError').style.display = 'none'; 
                 btnLogin.style.display = 'none';
                 btnProfile.style.display = 'block';
                 statusText.style.display = 'block';
                 statusText.innerHTML = `☁️ Online`;
                 profileEmail.value = user.email;
 
-                // Controlla di nuovo le notifiche per sicurezza quando l'utente è loggato
                 window.controllaNotificheBacheca();
 
                 try {
