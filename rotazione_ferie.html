@@ -446,24 +446,37 @@
         };
 
         window.pubblicaAnnuncio = async () => {
-            const t = document.getElementById('adTipoFerie').value; const ct = document.getElementById('adCercoTipo').value;
-            const cv = ct==='mesi' ? Array.from(document.querySelectorAll('#checkboxes-mesi input:checked')).map(b => b.value) : [document.getElementById('adPeriodoCercato').value];
-            if(!document.getElementById('adPeriodoOfferto').value || cv.length === 0) return alert("Completa i dati!");
+            const btn = document.getElementById('btnSalvaAnnuncio');
+            const t = document.getElementById('adTipoFerie').value; 
+            const ct = document.getElementById('adCercoTipo').value;
+            const cv = ct === 'mesi' ? Array.from(document.querySelectorAll('#checkboxes-mesi input:checked')).map(b => b.value) : [document.getElementById('adPeriodoCercato').value];
             
-            await addDoc(collection(db, "bacheca_ferie"), { 
-                uid: currentUser.uid, 
-                nome: myFerieData.nome, 
-                cognome: myFerieData.cognome, 
-                telefono: myFerieData.telefono, 
-                mansione: myFerieData.mansione, 
-                matricola: myFerieData.matricola, // INSERITO SALVATAGGIO MATRICOLA QUI
-                timestamp: Date.now(), 
-                tipo_ferie: t, 
-                periodo_offerto: document.getElementById('adPeriodoOfferto').value, 
-                cerco_tipo: ct, 
-                cerco_valori: cv 
-            });
-            location.reload();
+            if(!document.getElementById('adPeriodoOfferto').value || cv.length === 0 || (ct === 'periodo' && !cv[0])) {
+                return alert("Completa tutti i campi prima di pubblicare!");
+            }
+            
+            btn.innerText = "⏳ Pubblicazione...";
+            
+            try {
+                await addDoc(collection(db, "bacheca_ferie"), { 
+                    uid: currentUser.uid, 
+                    nome: myFerieData.nome || "", 
+                    cognome: myFerieData.cognome || "", 
+                    telefono: myFerieData.telefono || "", 
+                    mansione: myFerieData.mansione || "", 
+                    matricola: myFerieData.matricola || userDataPrivate.matricola || "N/D", 
+                    timestamp: Date.now(), 
+                    tipo_ferie: t, 
+                    periodo_offerto: document.getElementById('adPeriodoOfferto').value, 
+                    cerco_tipo: ct, 
+                    cerco_valori: cv 
+                });
+                location.reload();
+            } catch (error) {
+                console.error("Errore Firebase:", error);
+                alert("Errore durante la pubblicazione: " + error.message);
+                btn.innerText = "Pubblica";
+            }
         };
 
         window.caricaBacheca = async function() {
@@ -514,4 +527,3 @@
     </script>
 </body>
 </html>
- 
