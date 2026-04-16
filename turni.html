@@ -189,11 +189,18 @@
         // Mappa Globale del sistema GitHub
         let mappaAlbero = [];
 
-        async function downloadForzato(url, filename) {
+        // FUNZIONE DOWNLOAD FORZATO
+        async function downloadForzato(url, filename, btnElement) {
+            let originalText = "⬇️";
+            if(btnElement) {
+                originalText = btnElement.innerHTML;
+                btnElement.innerHTML = "⏳";
+            }
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
-                const blobUrl = URL.createObjectURL(blob);
+                const forceBlob = new Blob([blob], { type: "application/octet-stream" });
+                const blobUrl = URL.createObjectURL(forceBlob);
                 const a = document.createElement('a');
                 a.href = blobUrl;
                 a.download = filename;
@@ -203,6 +210,8 @@
                 URL.revokeObjectURL(blobUrl);
             } catch (e) {
                 window.open(url, '_blank');
+            } finally {
+                if(btnElement) btnElement.innerHTML = originalText;
             }
         }
 
@@ -269,7 +278,6 @@
                         
                         if (d.includes("varianti")) {
                             btn.innerText = "Caricamento...";
-                            // Legge il file testuale da GitHub
                             fetch(`${GITHUB_BASE_URL}${d}/nome.txt?v=${Date.now()}`)
                                 .then(response => {
                                     if (response.ok) return response.text();
@@ -359,15 +367,20 @@
                     const row = document.createElement('div'); row.className = "file-row";
                     if (nomeOrig.includes("libro")) row.style.marginBottom = "10px";
 
+                    const fileUrl = `${GITHUB_BASE_URL}${dir}/${nomeOrig}`;
+
                     const aOpen = document.createElement('a');
-                    aOpen.className = "file-btn"; aOpen.innerText = nomeVis;
-                    // Indirizza al PDF su GitHub
-                    aOpen.href = `${GITHUB_BASE_URL}${dir}/${nomeOrig}`;
+                    aOpen.className = "file-btn"; 
+                    aOpen.innerText = nomeVis;
+                    
+                    // Usa il visualizzatore universale di Google Docs per forzare l'apertura nel browser senza download automatico
+                    aOpen.href = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl + "?v=" + Date.now())}`;
                     aOpen.target = "_blank";
 
                     const aDown = document.createElement('div');
-                    aDown.className = "download-btn"; aDown.innerHTML = "⬇️";
-                    aDown.onclick = () => downloadForzato(`${GITHUB_BASE_URL}${dir}/${nomeOrig}`, nomeOrig);
+                    aDown.className = "download-btn"; 
+                    aDown.innerHTML = "⬇️";
+                    aDown.onclick = function() { downloadForzato(fileUrl + "?v=" + Date.now(), nomeOrig, this); };
 
                     row.appendChild(aOpen); row.appendChild(aDown);
 
@@ -462,7 +475,6 @@
         }
 
         function apriImmagineTurno(nomeFile) {
-            // Percorso Immagine su GitHub
             currentImagePath = `${GITHUB_BASE_URL}${currentImgDir}/${nomeFile}`;
             let imgElement = document.getElementById('turnoImage');
             imgElement.onerror = erroreImmagine; 
