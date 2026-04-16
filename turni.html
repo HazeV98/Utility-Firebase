@@ -172,10 +172,13 @@
     </div>
 
     <script>
+        // CONFIGURAZIONE REPOSITORY GITHUB
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/HazeV98/Utility_storage/main/";
+
         function apriMenuLaterale() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').style.display = 'block'; }
         function chiudiMenuLaterale() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').style.display = 'none'; }
 
-        // --- VARIABILI DI STATO (Niente più GitHub API!) ---
+        // --- VARIABILI DI STATO ---
         let numCartelle = 0;
         let currentImgList = [];
         let currentImgDir = "";
@@ -183,7 +186,7 @@
         let pzInstance = null;
         let currentImagePath = "";
         
-        // Mappa Globale del sistema Firebase
+        // Mappa Globale del sistema GitHub
         let mappaAlbero = [];
 
         async function downloadForzato(url, filename) {
@@ -237,9 +240,9 @@
 
             const area = document.getElementById('content-area');
             try {
-                // 1. CARICAMENTO DELLA NUOVA MAPPA GLOBALE (Locale/Firebase)
-                const resMappa = await fetch('mappa_file.json?t=' + new Date().getTime());
-                if (!resMappa.ok) throw new Error("Mappa file non trovata");
+                // 1. CARICAMENTO DELLA MAPPA GLOBALE DA GITHUB
+                const resMappa = await fetch(GITHUB_BASE_URL + 'mappa_file.json?v=' + Date.now());
+                if (!resMappa.ok) throw new Error("Mappa file non trovata su GitHub");
                 
                 const datiMappa = await resMappa.json();
                 mappaAlbero = datiMappa.albero || [];
@@ -266,8 +269,8 @@
                         
                         if (d.includes("varianti")) {
                             btn.innerText = "Caricamento...";
-                            // Legge il file di testo internamente senza usare API
-                            fetch(`${d}/nome.txt?t=${new Date().getTime()}`)
+                            // Legge il file testuale da GitHub
+                            fetch(`${GITHUB_BASE_URL}${d}/nome.txt?v=${Date.now()}`)
                                 .then(response => {
                                     if (response.ok) return response.text();
                                     throw new Error("File txt assente");
@@ -284,7 +287,7 @@
                         }
                     });
                 }
-            } catch (e) { area.innerHTML = "<div class='status-message'>In attesa di primo caricamento dati...</div>"; }
+            } catch (e) { area.innerHTML = "<div class='status-message'>Errore di connessione a GitHub. Riprova più tardi.</div>"; }
         }
 
         async function caricaFiles(dir) {
@@ -300,13 +303,11 @@
             
             currentImgDir = imgDir;
             
-            // Popolamento lista immagini senza server (esclusivo tramite la mappa)
             currentImgList = mappaAlbero
                 .filter(p => p.startsWith(imgDir + "/") && (p.toLowerCase().endsWith(".jpg") || p.toLowerCase().endsWith(".png")))
                 .map(p => ({ name: p.split('/')[1] }));
             
             try {
-                // Leggiamo PDF e JSON usando la mappa
                 let filesInDir = mappaAlbero
                     .filter(p => p.startsWith(dir + "/") && p.split('/').length === 2)
                     .map(p => p.split('/')[1]);
@@ -360,13 +361,13 @@
 
                     const aOpen = document.createElement('a');
                     aOpen.className = "file-btn"; aOpen.innerText = nomeVis;
-                    // Percorso relativo per Firebase
-                    aOpen.href = `${dir}/${nomeOrig}`;
+                    // Indirizza al PDF su GitHub
+                    aOpen.href = `${GITHUB_BASE_URL}${dir}/${nomeOrig}`;
                     aOpen.target = "_blank";
 
                     const aDown = document.createElement('div');
                     aDown.className = "download-btn"; aDown.innerHTML = "⬇️";
-                    aDown.onclick = () => downloadForzato(`${dir}/${nomeOrig}`, nomeOrig);
+                    aDown.onclick = () => downloadForzato(`${GITHUB_BASE_URL}${dir}/${nomeOrig}`, nomeOrig);
 
                     row.appendChild(aOpen); row.appendChild(aDown);
 
@@ -461,8 +462,8 @@
         }
 
         function apriImmagineTurno(nomeFile) {
-            // Percorso Firebase locale
-            currentImagePath = `${currentImgDir}/${nomeFile}`;
+            // Percorso Immagine su GitHub
+            currentImagePath = `${GITHUB_BASE_URL}${currentImgDir}/${nomeFile}`;
             let imgElement = document.getElementById('turnoImage');
             imgElement.onerror = erroreImmagine; 
             imgElement.src = currentImagePath;
@@ -524,8 +525,8 @@
             const jsonName = baseName + ".json";
             
             try {
-                // Percorso Firebase locale
-                const url = `${dirName}/${encodeURIComponent(jsonName)}?t=${new Date().getTime()}`;
+                // Legge i dati delle corse dal JSON su GitHub
+                const url = `${GITHUB_BASE_URL}${dirName}/${encodeURIComponent(jsonName)}?v=${Date.now()}`;
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("File dati (JSON) non trovato per questa linea.");
                 
@@ -714,8 +715,8 @@
                         let monthName = mNames[dateObj.getMonth()];
                         let yearNum = dateObj.getFullYear();
                         
-                        // Percorso Firebase
-                        let rotUrl = `rotazioni/rotazioni_${monthName}_${yearNum}.json?t=${new Date().getTime()}`;
+                        // Rotazioni pescate dal Magazzino GitHub
+                        let rotUrl = `${GITHUB_BASE_URL}rotazioni/rotazioni_${monthName}_${yearNum}.json?v=${Date.now()}`;
                         
                         let resRot = await fetch(rotUrl);
                         if (resRot.ok) {
@@ -783,4 +784,3 @@
     </script>
 </body>
 </html>
-
